@@ -60,3 +60,26 @@ func LoginUser(db *sql.DB, identifier string) (*model.User, string, error) {
 
 	return &user, passwordHash, nil
 }
+func GetProfile(db *sql.DB, userID string) (*model.User, error) {
+	var user model.User
+
+	query := `
+		SELECT id, full_name, username, email, created_at
+		FROM users
+		WHERE id = $1
+	`
+
+	err := db.QueryRow(query, userID).Scan(
+		&user.ID,
+		&user.FullName,
+		&user.Username,
+		&user.Email,
+		&user.CreatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}

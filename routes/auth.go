@@ -21,5 +21,8 @@ func AuthRoutes(api fiber.Router, db *sql.DB) {
 	api.Post("/auth/logout", func(c *fiber.Ctx) error {
 		return service.LogoutService(c)
 	})
+	api.Get("/auth/profile", func(c *fiber.Ctx) error {
+		return service.GetProfileService(c, db)
+	})
 
 }

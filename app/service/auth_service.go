@@ -168,3 +168,42 @@ func LogoutService(c *fiber.Ctx) error {
 		"message": "Logout berhasil",
 	})
 }
+func GetProfileService(c *fiber.Ctx, db *sql.DB) error {
+	tokenString := c.Get("Authorization")
+	if tokenString == "" {
+		return c.Status(401).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Unauthorized",
+		})
+	}
+
+	if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
+		tokenString = tokenString[7:]
+	}
+
+	claims, err := utils.ValidateToken(tokenString)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid Token",
+		})
+	}
+
+	userPtr, err := repository.GetProfile(db, claims.UserID.String())
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{
+			"status":  "error",
+			"message": "User Not Found",
+		})
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"status": "success",
+		"data": fiber.Map{
+			"id":        userPtr.ID,
+			"full_name": userPtr.FullName,
+			"username":  userPtr.Username,
+			"email":     userPtr.Email,
+		},
+	})
+}
