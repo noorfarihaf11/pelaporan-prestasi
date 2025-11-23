@@ -16,7 +16,7 @@ func LoginService(c *fiber.Ctx, db *sql.DB) error {
 
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
+			"status": "error",
 			"message": "Request body tidak valid",
 		})
 	}
@@ -24,32 +24,48 @@ func LoginService(c *fiber.Ctx, db *sql.DB) error {
 	userPtr, passwordHash, err := repository.LoginUser(db, req.Username)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"success": false,
+			"status": "error",
 			"message": "Username atau password salah",
 		})
 	}
 
 	if !utils.CheckPassword(req.Password, passwordHash) {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"success": false,
+			"status": "error",
 			"message": "Password salah",
 		})
 	}
 
-	token, err := utils.GenerateToken(*userPtr)
+	accessToken, err := utils.GenerateToken(*userPtr)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"success": false,
+			"status": "error",
 			"message": "Gagal membuat token JWT",
 		})
 	}
 
+	refreshToken, err := utils.GenerateRefreshToken(*userPtr)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status": "error",
+			"message": "Gagal membuat refresh token",
+		})
+	}
+
+	userResponse := fiber.Map{
+		"id":        userPtr.ID,
+		"username":  userPtr.Username,
+		"full_name":  userPtr.FullName,
+		"role":      "Mahasiswa",     
+		"permissions": []string{},   
+	}
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"success": true,
-		"message": "Login berhasil",
+		"status": "success",
 		"data": fiber.Map{
-			"user":  userPtr,
-			"token": token,
+			"token":        accessToken,
+			"refreshToken": refreshToken,
+			"user":         userResponse,
 		},
 	})
 }

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"pelaporan-prestasi/app/model"
-	_"time"
+	_ "time"
 )
 
 func RegisterUser(db *sql.DB, user *model.User) (*model.User, error) {
@@ -40,7 +40,7 @@ func LoginUser(db *sql.DB, identifier string) (*model.User, string, error) {
 	var passwordHash string
 
 	query := `
-		SELECT id, username, email, password_hash, created_at
+		SELECT id, username, email, password_hash, full_name, created_at
 		FROM users
 		WHERE username = $1 OR email = $1
 	`
@@ -50,6 +50,7 @@ func LoginUser(db *sql.DB, identifier string) (*model.User, string, error) {
 		&user.Username,
 		&user.Email,
 		&passwordHash,
+		&user.FullName,
 		&user.CreatedAt,
 	)
 

@@ -22,6 +22,18 @@ func GenerateToken(user model.User) (string, error) {
     token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims) 
     return token.SignedString(jwtSecret) 
 } 
+
+func GenerateRefreshToken(user model.User) (string, error) {
+	claims := jwt.MapClaims{
+		"user_id": user.ID.String(),
+		"exp":     time.Now().Add(7 * 24 * time.Hour).Unix(), // 7 hari
+		"iat":     time.Now().Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtSecret)
+}
+
  
 func ValidateToken(tokenString string) (*model.JWTClaims, error) { 
     token, err := jwt.ParseWithClaims(tokenString, &model.JWTClaims{}, 
