@@ -37,3 +37,7 @@ type RegisterRequest struct {
     Email    string `json:"email" validate:"unique,required,email"`
     Password string `json:"password" validate:"required,min=6"`
 }
+type RefreshClaims struct {
+	UserID string `json:"user_id"`
+	jwt.RegisteredClaims
+}
