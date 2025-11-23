@@ -162,3 +162,9 @@ func RefreshTokenService(c *fiber.Ctx, db *sql.DB) error {
 		},
 	})
 }
+func LogoutService(c *fiber.Ctx) error {
+	return c.Status(200).JSON(fiber.Map{
+		"status":  "success",
+		"message": "Logout berhasil",
+	})
+}

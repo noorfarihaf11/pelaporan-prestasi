@@ -18,5 +18,8 @@ func AuthRoutes(api fiber.Router, db *sql.DB) {
 	api.Post("/auth/refresh", func(c *fiber.Ctx) error {
 		return service.RefreshTokenService(c, db)
 	})
+	api.Post("/auth/logout", func(c *fiber.Ctx) error {
+		return service.LogoutService(c)
+	})
 
 }
