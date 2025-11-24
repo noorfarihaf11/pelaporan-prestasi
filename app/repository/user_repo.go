@@ -42,3 +42,33 @@ func GetUserByID(db *sql.DB, id string) (*model.User, error) {
 
 	return &u, nil
 }
+
+func CreateUser(db *sql.DB, user *model.User) (*model.User, error) {
+	query := `
+		INSERT INTO users (full_name, username, email, password_hash, role_id)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, full_name, username, email, role_id, created_at
+	`
+
+	err := db.QueryRow(
+		query,
+		user.FullName,
+		user.Username,
+		user.Email,
+		user.PasswordHash,
+		user.RoleID,
+	).Scan(
+		&user.ID,
+		&user.FullName,
+		&user.Username,
+		&user.Email,
+		&user.RoleID,
+		&user.CreatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}

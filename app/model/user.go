@@ -16,3 +16,11 @@ type User struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 	CreatedAt    time.Time `json:"created_at"`
 }
+
+type CreateUser struct {
+    FullName string `json:"full_name" validate:"unique,required"`
+    Username string `json:"username" validate:"unique,required,min=3,max=50"`
+    Email    string `json:"email" validate:"unique,required,email"`
+    Password string `json:"password" validate:"required,min=6"`
+	RoleID   string `json:"role_id"`
+}

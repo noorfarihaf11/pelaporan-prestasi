@@ -15,5 +15,8 @@ func UserRoutes(api fiber.Router, db *sql.DB) {
 	api.Get("/users/:id", func(c *fiber.Ctx) error {
 		return service.GetUserByIDService(c, db)
 	})
+	api.Post("/users", func(c *fiber.Ctx) error {
+		return service.CreateUserService(c, db)
+	})
 
 }

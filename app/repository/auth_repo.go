@@ -60,6 +60,7 @@ func LoginUser(db *sql.DB, identifier string) (*model.User, string, error) {
 
 	return &user, passwordHash, nil
 }
+
 func GetProfile(db *sql.DB, userID string) (*model.User, error) {
 	var user model.User
 
