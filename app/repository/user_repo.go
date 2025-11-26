@@ -3,6 +3,8 @@ package repository
 import (
 	"database/sql"
 	"pelaporan-prestasi/app/model"
+
+	"github.com/google/uuid"
 )
 
 func GetAllUser(db *sql.DB) ([]model.User, error) {
@@ -80,28 +82,37 @@ func CreateUserTx(tx *sql.Tx, user *model.User) (*model.User, error) {
     return user, nil
 }
 
-
-func UpdateUser(db *sql.DB, id string, user *model.User) (*model.User, error) {
+func UpdateUserTx(tx *sql.Tx, id uuid.UUID, user *model.User) (*model.User, error) {
 	query := `
-		UPDATE (full_name, username, email, password_hash, role_id)
-		SET ($1, $2, $3, $4, $5)
-		RETURNING id, full_name, username, email, role_id, created_at
+		UPDATE users
+		SET 
+			full_name = $2,
+			username = $3,
+			email = $4,
+			password_hash = $5,
+			role_id = $6,
+			updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, full_name, username, email, role_id, is_active, created_at, updated_at
 	`
 
-	err := db.QueryRow(
+	err := tx.QueryRow(
 		query,
 		user.FullName,
 		user.Username,
 		user.Email,
 		user.PasswordHash,
 		user.RoleID,
+		id,
 	).Scan(
 		&user.ID,
 		&user.FullName,
 		&user.Username,
 		&user.Email,
 		&user.RoleID,
+		&user.IsActive,
 		&user.CreatedAt,
+		&user.UpdatedAt,
 	)
 
 	if err != nil {

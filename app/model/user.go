@@ -17,7 +17,7 @@ type User struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-type CreateUserDTO struct {
+type UserDTO struct {
     FullName  string `json:"full_name"`
     Username  string `json:"username"`
     Email     string `json:"email"`
