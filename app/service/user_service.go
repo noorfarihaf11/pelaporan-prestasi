@@ -101,59 +101,136 @@ func GetUserByIDService(c *fiber.Ctx, db *sql.DB) error {
 }
 
 func CreateUserService(c *fiber.Ctx, db *sql.DB) error {
-	var req model.CreateUser
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Gagal parse request",
-			"success": false,
-		})
-	}
+    var dto model.CreateUserDTO
+    if err := c.BodyParser(&dto); err != nil {
+        return c.Status(400).JSON(fiber.Map{
+            "status":  "error",
+            "message": "invalid_request_body",
+        })
+    }
 
-	hashedPassword, err := utils.HashPassword(req.Password)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Gagal enkripsi password",
-			"success": false,
-		})
-	}
+    roleUUID, err := uuid.Parse(dto.RoleID)
+    if err != nil {
+        return c.Status(400).JSON(fiber.Map{
+            "status":  "error",
+            "message": "invalid_role_id_format",
+        })
+    }
 
-	roleID, err := uuid.Parse(req.RoleID)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "RoleID is not a valid UUID",
-			"success": false,
-		})
-	}
+    tx, err := db.Begin()
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed_to_start_transaction",
+        })
+    }
 
-	user := &model.User{
-		FullName:     req.FullName,
-		Username:     req.Username,
-		Email:        req.Email,
-		PasswordHash: hashedPassword,
-		 RoleID:       roleID,
-		CreatedAt:    time.Now(),
-	}
+    defer func() {
+        if err != nil {
+            tx.Rollback()
+        }
+    }()
 
-	createdUser, err := repository.CreateUser(db, user)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Gagal membuat user: " + err.Error(),
-			"success": false,
-		})
-	}
+    hashed, err := utils.HashPassword(dto.Password)
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed_hashing_password",
+        })
+    }
 
-	token, err := utils.GenerateToken(*createdUser)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Gagal membuat token JWT",
-			"success": false,
-		})
-	}
+    user := &model.User{
+        FullName:     dto.FullName,
+        Username:     dto.Username,
+        Email:        dto.Email,
+        PasswordHash: hashed,
+        RoleID:       roleUUID,
+        IsActive:     true,
+        CreatedAt:    time.Now(),
+        UpdatedAt:    time.Now(),
+    }
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Berhasil membuat user baru",
-		"success": true,
-		"token":   token,
-		"user":    createdUser,
-	})
+    user, err = repository.CreateUserTx(tx, user)
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed_creating_user",
+        })
+    }
+
+    var student_result *model.Student = nil
+    var lecturer_result *model.Lecturer = nil
+
+    if dto.StudentProfile != nil {
+          var advisorUUID *uuid.UUID = nil
+
+        if dto.StudentProfile.AdvisorID != nil {
+            if *dto.StudentProfile.AdvisorID != "" {
+                parsed, err := uuid.Parse(*dto.StudentProfile.AdvisorID)
+                if err != nil {
+                    return c.Status(400).JSON(fiber.Map{
+                        "status":  "error",
+                        "message": "invalid_advisor_id_format",
+                    })
+                }
+                advisorUUID = &parsed
+            }
+        }
+
+        student_profile := &model.Student{
+            UserID:       user.ID,
+            StudentID:    dto.StudentProfile.StudentID,   
+            ProgramStudy: dto.StudentProfile.ProgramStudy,
+            AcademicYear: dto.StudentProfile.AcademicYear,
+            AdvisorID:    advisorUUID,                   
+            CreatedAt:    time.Now(),
+        }
+
+        err = repository.CreateStudentTx(tx, student_profile)
+        if err != nil {
+            return c.Status(500).JSON(fiber.Map{
+                "status":  "error",
+                "message": "failed_creating_student_profile",
+            })
+        }
+
+        student_result = student_profile
+    }
+
+    if dto.LecturerProfile != nil {
+        lecturer_profile := &model.Lecturer{
+            UserID:     user.ID,
+            LecturerID: dto.LecturerProfile.LecturerID,  
+            Department: dto.LecturerProfile.Department,
+            CreatedAt:  time.Now(),
+        }
+
+        err = repository.CreateLecturerTx(tx, lecturer_profile)
+        if err != nil {
+            return c.Status(500).JSON(fiber.Map{
+                "status":  "error",
+                "message": "failed_creating_lecturer_profile",
+            })
+        }
+        
+        lecturer_result = lecturer_profile
+    }
+
+    err = tx.Commit()
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed_committing_transaction",
+        })
+    }
+
+    return c.Status(201).JSON(fiber.Map{
+        "status":  "success",
+        "message": "user_created_successfully",
+        "data": fiber.Map{
+            "user": user,
+            "student_profile": student_result,
+            "lecturer_profile": lecturer_result,
+        },
+    })
 }

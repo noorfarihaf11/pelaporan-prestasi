@@ -17,10 +17,25 @@ type User struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-type CreateUser struct {
-    FullName string `json:"full_name" validate:"unique,required"`
-    Username string `json:"username" validate:"unique,required,min=3,max=50"`
-    Email    string `json:"email" validate:"unique,required,email"`
-    Password string `json:"password" validate:"required,min=6"`
-	RoleID   string `json:"role_id"`
+type CreateUserDTO struct {
+    FullName  string `json:"full_name"`
+    Username  string `json:"username"`
+    Email     string `json:"email"`
+    Password  string `json:"password"`
+    RoleID    string `json:"role_id"`
+
+    StudentProfile  *StudentProfileDTO  `json:"student_profile,omitempty"`
+    LecturerProfile *LecturerProfileDTO `json:"lecturer_profile,omitempty"`
+}
+
+type StudentProfileDTO struct {
+    StudentID    string `json:"student_id"`
+    ProgramStudy string `json:"program_study"`
+    AcademicYear string `json:"academic_year"`
+    AdvisorID    *string `json:"advisor_id, omitempty"`
+}
+
+type LecturerProfileDTO struct {
+    LecturerID string `json:"lecturer_id"`
+    Department string `json:"department"`
 }

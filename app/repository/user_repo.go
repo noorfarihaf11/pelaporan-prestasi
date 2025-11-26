@@ -43,10 +43,48 @@ func GetUserByID(db *sql.DB, id string) (*model.User, error) {
 	return &u, nil
 }
 
-func CreateUser(db *sql.DB, user *model.User) (*model.User, error) {
+func CreateUserTx(tx *sql.Tx, user *model.User) (*model.User, error) {
+
+    query := `
+        INSERT INTO users (username, email, password_hash, full_name, role_id, is_active, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id, username, email, password_hash, full_name, role_id, is_active, created_at, updated_at
+    `
+
+    err := tx.QueryRow(
+        query,
+        user.Username,
+        user.Email,
+        user.PasswordHash,
+        user.FullName,
+        user.RoleID,
+        user.IsActive,
+        user.CreatedAt,
+        user.UpdatedAt,
+    ).Scan(
+        &user.ID,
+        &user.Username,
+        &user.Email,
+        &user.PasswordHash,
+        &user.FullName,
+        &user.RoleID,
+        &user.IsActive,
+        &user.CreatedAt,
+        &user.UpdatedAt,
+    )
+
+    if err != nil {
+        return nil, err
+    }
+
+    return user, nil
+}
+
+
+func UpdateUser(db *sql.DB, id string, user *model.User) (*model.User, error) {
 	query := `
-		INSERT INTO users (full_name, username, email, password_hash, role_id)
-		VALUES ($1, $2, $3, $4, $5)
+		UPDATE (full_name, username, email, password_hash, role_id)
+		SET ($1, $2, $3, $4, $5)
 		RETURNING id, full_name, username, email, role_id, created_at
 	`
 
