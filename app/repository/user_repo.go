@@ -85,15 +85,14 @@ func CreateUserTx(tx *sql.Tx, user *model.User) (*model.User, error) {
 func UpdateUserTx(tx *sql.Tx, id uuid.UUID, user *model.User) (*model.User, error) {
 	query := `
 		UPDATE users
-		SET 
-			full_name = $2,
-			username = $3,
-			email = $4,
-			password_hash = $5,
-			role_id = $6,
-			updated_at = NOW()
-		WHERE id = $1
-		RETURNING id, full_name, username, email, role_id, is_active, created_at, updated_at
+		SET full_name = $1,
+		    username = $2,
+		    email = $3,
+		    password_hash = $4,
+		    role_id = $5,
+		    updated_at = NOW()
+		WHERE id = $6
+		RETURNING id, full_name, username, email, role_id, created_at, updated_at
 	`
 
 	err := tx.QueryRow(
@@ -110,7 +109,6 @@ func UpdateUserTx(tx *sql.Tx, id uuid.UUID, user *model.User) (*model.User, erro
 		&user.Username,
 		&user.Email,
 		&user.RoleID,
-		&user.IsActive,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)

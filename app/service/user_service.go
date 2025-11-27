@@ -396,7 +396,7 @@ func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
 
     return c.Status(200).JSON(fiber.Map{
         "status":  "success",
-        "message": "user_updated_successfully",
+        "message": "Berhasil memperbarui user!",
         "data": fiber.Map{
             "user":             updatedUser,
             "student_profile":  studentResult,
