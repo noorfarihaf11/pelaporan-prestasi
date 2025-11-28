@@ -43,3 +43,23 @@ func DeleteLecturerTx(tx *sql.Tx, userID uuid.UUID) error {
 	return err
 }
 
+func GetAllLecturers(db *sql.DB) ([]model.Lecturer, error) {
+	rows, err := db.Query(`SELECT id, user_id, lecturer_id, department, created_at
+    FROM lecturers`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var lecturerList []model.Lecturer
+	for rows.Next() {
+		var l model.Lecturer
+		err := rows.Scan(&l.ID, &l.UserID, &l.LecturerID, &l.Department, &l.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		lecturerList = append(lecturerList, l)
+	}
+
+	return lecturerList, nil
+}
