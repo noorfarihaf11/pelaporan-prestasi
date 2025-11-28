@@ -460,7 +460,6 @@ func DeleteUserService(c *fiber.Ctx, db *sql.DB) error {
 		})
 	}
 
-	// hapus user utama
 	err = repository.DeleteUserTx(tx, userUUID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
@@ -481,4 +480,54 @@ func DeleteUserService(c *fiber.Ctx, db *sql.DB) error {
 		"status":  "success",
 		"message": "user_deleted_successfully",
 	})
+}
+
+func UpdateUserRoleService(c *fiber.Ctx, db *sql.DB) error {
+    id := c.Params("id")
+    if id == "" {
+        return c.Status(400).JSON(fiber.Map{
+            "status": "error",
+            "message": "missing_user_id",
+        })
+    }
+
+    userUUID, err := uuid.Parse(id)
+    if err != nil {
+        return c.Status(400).JSON(fiber.Map{
+            "status": "error",
+            "message": "invalid_user_id_format",
+        })
+    }
+
+    var payload struct {
+        RoleID string `json:"role_id"`
+    }
+
+    if err := c.BodyParser(&payload); err != nil {
+        return c.Status(400).JSON(fiber.Map{
+            "status": "error",
+            "message": "invalid_request_body",
+        })
+    }
+
+    roleUUID, err := uuid.Parse(payload.RoleID)
+    if err != nil {
+        return c.Status(400).JSON(fiber.Map{
+            "status": "error",
+            "message": "invalid_role_id_format",
+        })
+    }
+
+    err = repository.UpdateUserRole(db, userUUID, roleUUID)
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{
+            "status": "error",
+            "message": "failed_update_user_role",
+        })
+    }
+
+    return c.Status(200).JSON(fiber.Map{
+        "status": "success",
+        "message": "user_role_updated",
+    })
 }

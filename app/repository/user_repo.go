@@ -124,3 +124,13 @@ func DeleteUserTx(tx *sql.Tx, userID uuid.UUID) error {
 	_, err := tx.Exec(`DELETE FROM users WHERE id=$1`, userID)
 	return err
 }
+
+func UpdateUserRole(db *sql.DB, userID uuid.UUID, roleID uuid.UUID) error {
+	_, err := db.Exec(`
+		UPDATE users
+		SET role_id = $1, updated_at = NOW()
+		WHERE id = $2
+	`, roleID, userID)
+
+	return err
+}

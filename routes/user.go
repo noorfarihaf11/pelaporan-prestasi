@@ -21,5 +21,11 @@ func UserRoutes(api fiber.Router, db *sql.DB) {
 	api.Put("/users/:id", func(c *fiber.Ctx) error {
 		return service.UpdateUserService(c, db)
 	})
+	api.Delete("/users/:id", func(c *fiber.Ctx) error {
+		return service.DeleteUserService(c, db)
+	})
+	api.Put("/users/:id/role", func(c *fiber.Ctx) error {
+		return service.UpdateUserRoleService(c, db)
+	})
 
 }
