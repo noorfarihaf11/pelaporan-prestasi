@@ -40,9 +40,9 @@ func LoginUser(db *sql.DB, identifier string) (*model.User, string, error) {
 	var passwordHash string
 
 	query := `
-		SELECT id, username, email, password_hash, full_name, created_at
+		SELECT id, username, email, password_hash, full_name, role_id, is_active, updated_at, created_at
 		FROM users
-		WHERE username = $1 OR email = $1
+        WHERE username = $1
 	`
 
 	err := db.QueryRow(query, identifier).Scan(
@@ -51,6 +51,9 @@ func LoginUser(db *sql.DB, identifier string) (*model.User, string, error) {
 		&user.Email,
 		&passwordHash,
 		&user.FullName,
+		&user.RoleID,
+		&user.IsActive,
+		&user.UpdatedAt,
 		&user.CreatedAt,
 	)
 

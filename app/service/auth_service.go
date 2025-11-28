@@ -61,6 +61,7 @@ func LoginService(c *fiber.Ctx, db *sql.DB) error {
 				"id":          userPtr.ID,
 				"full_name":   userPtr.FullName,
 				"username":    userPtr.Username,
+				"role_id":     userPtr.RoleID,
 				"role":        "Mahasiswa",
 				"permissions": []string{},
 			},

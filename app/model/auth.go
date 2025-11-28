@@ -17,6 +17,7 @@ type LoginResponse struct {
 type JWTClaims struct {
 	UserID   uuid.UUID `json:"user_id"`
 	Username string    `json:"username"`
+	RoleID   uuid.UUID `json:"role_id"`
 	jwt.RegisteredClaims
 }
 type RegisterRequest struct {

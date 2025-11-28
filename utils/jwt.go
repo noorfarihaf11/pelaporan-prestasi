@@ -13,6 +13,7 @@ func GenerateToken(user model.User) (string, error) {
 	claims := model.JWTClaims{
 		UserID:   user.ID,
 		Username: user.Username,
+		RoleID:   user.RoleID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -27,6 +28,7 @@ func GenerateRefreshToken(user model.User) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id":  user.ID.String(),
 		"username": user.Username,
+		"role_id": user.RoleID.String(),
 		"exp":      time.Now().Add(7 * 24 * time.Hour).Unix(),
 		"iat":      time.Now().Unix(),
 	}
