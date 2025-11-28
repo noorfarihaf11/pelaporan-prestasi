@@ -528,6 +528,6 @@ func UpdateUserRoleService(c *fiber.Ctx, db *sql.DB) error {
 
     return c.Status(200).JSON(fiber.Map{
         "status": "success",
-        "message": "user_role_updated",
+        "message": "Role user berhasil diperbarui",
     })
 }

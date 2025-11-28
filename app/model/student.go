@@ -11,6 +11,6 @@ type Student struct {
 	StudentID    string		`json:"student_id"` 
 	ProgramStudy string		`json:"program_study"`
 	AcademicYear string    	`json:"academic_year"`
-	AdvisorID    *uuid.UUID 	`json:"advisor_id"`
+	AdvisorID    *uuid.UUID `json:"advisor_id"`
 	CreatedAt    time.Time 	`json:"created_at"`
 }

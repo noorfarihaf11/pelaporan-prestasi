@@ -11,4 +11,5 @@ func Routes(app *fiber.App, db *sql.DB) {
 
 	AuthRoutes(api, db)
 	UserRoutes(api, db)
+	StudentRoutes(api, db)
 }
