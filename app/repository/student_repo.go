@@ -1,8 +1,10 @@
 package repository
 
 import (
-    "database/sql"
-    "pelaporan-prestasi/app/model"
+	"database/sql"
+	"pelaporan-prestasi/app/model"
+
+	"github.com/google/uuid"
 )
 
 func CreateStudentTx(tx *sql.Tx, student *model.Student) error {
@@ -38,4 +40,9 @@ func UpdateStudentTx(tx *sql.Tx, s *model.Student) error {
         s.AdvisorID,
     )
     return err
+}
+
+func DeleteStudentTx(tx *sql.Tx, userID uuid.UUID) error {
+	_, err := tx.Exec(`DELETE FROM students WHERE user_id=$1`, userID)
+	return err
 }

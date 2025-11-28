@@ -405,3 +405,80 @@ func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
     })
 }
 
+func DeleteUserService(c *fiber.Ctx, db *sql.DB) error {
+	id := c.Params("id")
+	if id == "" {
+		return c.Status(400).JSON(fiber.Map{
+			"status":  "error",
+			"message": "missing_user_id",
+		})
+	}
+
+	userUUID, err := uuid.Parse(id)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"status":  "error",
+			"message": "invalid_user_id_format",
+		})
+	}
+
+	existing, err := repository.GetUserByID(db, id)
+	if err != nil || existing == nil {
+		return c.Status(404).JSON(fiber.Map{
+			"status":  "error",
+			"message": "user_not_found",
+		})
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "failed_to_start_transaction",
+		})
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	err = repository.DeleteStudentTx(tx, userUUID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "failed_delete_student_profile",
+		})
+	}
+
+	err = repository.DeleteLecturerTx(tx, userUUID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "failed_delete_lecturer_profile",
+		})
+	}
+
+	// hapus user utama
+	err = repository.DeleteUserTx(tx, userUUID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "failed_delete_user",
+		})
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "failed_commit_transaction",
+		})
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"status":  "success",
+		"message": "user_deleted_successfully",
+	})
+}

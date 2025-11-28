@@ -119,3 +119,8 @@ func UpdateUserTx(tx *sql.Tx, id uuid.UUID, user *model.User) (*model.User, erro
 
 	return user, nil
 }
+
+func DeleteUserTx(tx *sql.Tx, userID uuid.UUID) error {
+	_, err := tx.Exec(`DELETE FROM users WHERE id=$1`, userID)
+	return err
+}
