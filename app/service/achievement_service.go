@@ -230,19 +230,31 @@ func UpdateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 func SoftDeleteAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
     id := c.Params("id")
 
+    // Soft delete Mongo
     err := repository.SoftDeleteAchievement(mongoDB, id)
     if err != nil {
-        return c.Status(500).JSON(fiber.Map{
-            "status": "error",
-            "message": "failed_soft_delete_mongo",
+        return c.Status(400).JSON(fiber.Map{
+            "status":  "error",
+            "message": err.Error(),
         })
     }
 
+    // Update PostgreSQL reference
     err = repository.UpdateAchievementReference(db, id, "deleted")
     if err != nil {
+        msg := err.Error()
+
+        if msg == "reference_not_found" {
+            return c.Status(404).JSON(fiber.Map{
+                "status":  "error",
+                "message": "achievement_reference_not_found",
+            })
+        }
+
         return c.Status(500).JSON(fiber.Map{
-            "status": "error",
+            "status":  "error",
             "message": "failed_soft_delete_reference",
+            "detail":  msg,
         })
     }
 

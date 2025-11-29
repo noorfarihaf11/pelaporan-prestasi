@@ -110,8 +110,7 @@ func SoftDeleteAchievement(db *mongo.Database, id string) error {
         bson.M{"_id": objID},
         bson.M{
             "$set": bson.M{
-                "is_deleted": true,
-                "deleted_at": time.Now(),
+                "status": "deleted",
             },
         },
     )
