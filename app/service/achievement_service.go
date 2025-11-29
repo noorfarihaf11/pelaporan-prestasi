@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"encoding/json"
 	"pelaporan-prestasi/app/model"
 	"pelaporan-prestasi/app/repository"
@@ -8,11 +9,11 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database) error {
-    // Ambil semua form-data
+func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
     form, err := c.MultipartForm()
     if err != nil {
         return c.Status(400).JSON(fiber.Map{
@@ -21,7 +22,6 @@ func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database) error {
         })
     }
 
-    // Extract fields
     studentID := form.Value["student_id"][0]
     achievementType := form.Value["achievement_type"][0]
     title := form.Value["title"][0]
@@ -38,27 +38,22 @@ func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database) error {
         points, _ = strconv.Atoi(form.Value["points"][0])
     }
 
-    // Parse tags
     tags := []string{}
     if len(form.Value["tags"]) > 0 {
         json.Unmarshal([]byte(form.Value["tags"][0]), &tags)
     }
 
-    // Parse details (dinamis)
     var details map[string]interface{}
     if len(form.Value["details"]) > 0 {
         json.Unmarshal([]byte(form.Value["details"][0]), &details)
     }
 
-    // Handle attachments
     files := form.File["attachments"]
     var attachments []model.Attachment
 
     for _, file := range files {
-        // Simpan file ke folder lokal (atau ke cloud)
         path := "uploads/" + file.Filename
 
-        // Save file
         if err := c.SaveFile(file, path); err != nil {
             return c.Status(500).JSON(fiber.Map{
                 "status":  "error",
@@ -74,7 +69,6 @@ func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database) error {
         })
     }
 
-    // Bentuk struct Achievement
     ach := model.Achievement{
         StudentID: studentID,
         AchievementType: achievementType,
@@ -87,12 +81,21 @@ func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database) error {
 		Status: status,
     }
 
-    // Insert ke MongoDB
-    result, err := repository.CreateAchievement(mongoDB, &ach)
+     result, err := repository.CreateAchievement(mongoDB, &ach)
     if err != nil {
         return c.Status(500).JSON(fiber.Map{
             "status":  "error",
-            "message": "failed_create_achievement",
+            "message": "failed_create_achievement_mongo",
+        })
+    }
+
+    studentUUID, _ := uuid.Parse(ach.StudentID)
+
+    err = repository.CreateAchievementReference(db, studentUUID, result.ID.Hex())
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed_create_achievement_reference_postgres",
         })
     }
 
