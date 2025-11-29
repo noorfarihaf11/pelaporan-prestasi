@@ -12,9 +12,10 @@ import (
 func main() {
 	config.LoadEnv()
 	db := database.ConnectDB()
+	mongoDB := config.ConnectMongo()
 	app := config.NewApp(db)
 	port := os.Getenv("APP_PORT")
-	routes.Routes(app, db)
+	routes.Routes(app, db, mongoDB)
 	if port == "" {
 		port = "3000"
 	}
