@@ -21,4 +21,12 @@ func AchievementRoutes(api fiber.Router, db *sql.DB, mongoDB *mongo.Database) {
 	api.Get("/achievements/:id", func(c *fiber.Ctx) error {
 		return service.GetAchievementByIDService(c, mongoDB)
 	})
+
+	api.Put("/achievements/:id", func(c *fiber.Ctx) error {
+        return service.UpdateAchievementService(c, mongoDB, db)
+    })
+
+	api.Put("/achievements/delete/:id", func(c *fiber.Ctx) error {
+        return service.SoftDeleteAchievementService(c, mongoDB, db)
+    })
 }

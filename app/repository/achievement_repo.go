@@ -73,3 +73,47 @@ func GetAchievementByID(db *mongo.Database, id string) (*model.Achievement, erro
 
     return &ach, nil
 }
+
+func UpdateAchievement(db *mongo.Database, id string, update bson.M) (*model.Achievement, error) {
+    collection := db.Collection("achievements")
+
+    objID, err := primitive.ObjectIDFromHex(id)
+    if err != nil {
+        return nil, err
+    }
+
+    _, err = collection.UpdateOne(
+        context.Background(),
+        bson.M{"_id": objID},
+        bson.M{"$set": update},
+    )
+    if err != nil {
+        return nil, err
+    }
+
+    var updated model.Achievement
+    collection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&updated)
+
+    return &updated, nil
+}
+
+func SoftDeleteAchievement(db *mongo.Database, id string) error {
+    collection := db.Collection("achievements")
+
+    objID, err := primitive.ObjectIDFromHex(id)
+    if err != nil {
+        return err
+    }
+
+    _, err = collection.UpdateOne(
+        context.Background(),
+        bson.M{"_id": objID},
+        bson.M{
+            "$set": bson.M{
+                "is_deleted": true,
+                "deleted_at": time.Now(),
+            },
+        },
+    )
+    return err
+}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -152,3 +153,101 @@ func GetAchievementByIDService(c *fiber.Ctx, mongoDB *mongo.Database) error {
 	})
 }
 
+func UpdateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
+    id := c.Params("id") // mongo achievement id (hex)
+    if id == "" {
+        return c.Status(400).JSON(fiber.Map{"status": "error", "message": "missing_id"})
+    }
+
+    form, err := c.MultipartForm()
+    if err != nil {
+        return c.Status(400).JSON(fiber.Map{"status": "error", "message": "invalid_form_data"})
+    }
+
+    title := form.Value["title"][0]
+    description := form.Value["description"][0]
+    status := "draft"
+    if len(form.Value["status"]) > 0 {
+        status = form.Value["status"][0]
+    }
+
+    var details map[string]interface{}
+    if len(form.Value["details"]) > 0 {
+        json.Unmarshal([]byte(form.Value["details"][0]), &details)
+    }
+
+    tags := []string{}
+    if len(form.Value["tags"]) > 0 {
+        json.Unmarshal([]byte(form.Value["tags"][0]), &tags)
+    }
+
+    files := form.File["attachments"]
+    var attachments []model.Attachment
+
+    for _, file := range files {
+        path := "uploads/" + file.Filename
+        c.SaveFile(file, path)
+
+        attachments = append(attachments, model.Attachment{
+            FileName:   file.Filename,
+            FileUrl:    path,
+            FileType:   file.Header.Get("Content-Type"),
+            UploadedAt: time.Now(),
+        })
+    }
+
+    points := 0
+    if len(form.Value["points"]) > 0 {
+        points, _ = strconv.Atoi(form.Value["points"][0])
+    }
+
+    updated, err := repository.UpdateAchievement(mongoDB, id, bson.M{
+        "title":        title,
+        "description":  description,
+        "details":      details,
+        "tags":         tags,
+        "attachments":  attachments,
+        "status":       status,
+        "points":       points,
+        "updated_at":   time.Now(),
+    })
+
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{"status": "error", "message": "failed_update_mongo"})
+    }
+
+    err = repository.UpdateAchievementReference(db, id, status)
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{"status": "error", "message": "failed_update_reference"})
+    }
+
+    return c.Status(200).JSON(fiber.Map{
+        "status":  "success",
+        "message": "achievement_updated_successfully",
+        "data":    updated,
+    })
+}
+func SoftDeleteAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
+    id := c.Params("id")
+
+    err := repository.SoftDeleteAchievement(mongoDB, id)
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{
+            "status": "error",
+            "message": "failed_soft_delete_mongo",
+        })
+    }
+
+    err = repository.UpdateAchievementReference(db, id, "deleted")
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{
+            "status": "error",
+            "message": "failed_soft_delete_reference",
+        })
+    }
+
+    return c.Status(200).JSON(fiber.Map{
+        "status":  "success",
+        "message": "achievement_deleted_successfully",
+    })
+}

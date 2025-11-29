@@ -25,3 +25,13 @@ func CreateAchievementReference(db *sql.DB, studentID uuid.UUID, mongoID string)
 
     return err
 }
+
+func UpdateAchievementReference(db *sql.DB, mongoID string, status string) error {
+    query := `
+        UPDATE achievement_references
+        SET status = $1, updated_at = NOW()
+        WHERE mongo_achievement_id = $2
+    `
+    _, err := db.Exec(query, status, mongoID)
+    return err
+}
