@@ -11,9 +11,10 @@ func CreateStudentTx(tx *sql.Tx, student *model.Student) error {
 	query := `
         INSERT INTO students (user_id, student_id, program_study, academic_year, advisor_id, created_at)
         VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id
     `
 
-	_, err := tx.Exec(
+	return tx.QueryRow(
 		query,
 		student.UserID,
 		student.StudentID,
@@ -21,10 +22,9 @@ func CreateStudentTx(tx *sql.Tx, student *model.Student) error {
 		student.AcademicYear,
 		student.AdvisorID,
 		student.CreatedAt,
-	)
-
-	return err
+	).Scan(&student.ID)
 }
+
 
 func UpdateStudentTx(tx *sql.Tx, s *model.Student) error {
 	_, err := tx.Exec(`
