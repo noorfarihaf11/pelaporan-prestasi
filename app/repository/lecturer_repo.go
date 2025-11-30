@@ -9,17 +9,15 @@ import (
 
 func CreateLecturerTx(tx *sql.Tx, lecturer *model.Lecturer) error {
     query := `
-        INSERT INTO lecturers (user_id, lecturer_id, department, created_at)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO lecturers (user_id, lecturer_id, department)
+        VALUES ($1, $2, $3)
+        RETURNING id
     `
-
-    _, err := tx.Exec(
-        query,
+    err := tx.QueryRow(query,
         lecturer.UserID,
         lecturer.LecturerID,
         lecturer.Department,
-        lecturer.CreatedAt,
-    )
+    ).Scan(&lecturer.ID)
 
     return err
 }

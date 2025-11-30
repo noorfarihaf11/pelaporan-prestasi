@@ -116,3 +116,23 @@ func SoftDeleteAchievement(db *mongo.Database, id string) error {
     )
     return err
 }
+
+func SubmitAchievement(db *mongo.Database, id string) error {
+    collection := db.Collection("achievements")
+
+    objID, err := primitive.ObjectIDFromHex(id)
+    if err != nil {
+        return err
+    }
+
+    _, err = collection.UpdateOne(
+        context.Background(),
+        bson.M{"_id": objID},
+        bson.M{
+            "$set": bson.M{
+                "status": "submitted",
+            },
+        },
+    )
+    return err
+}
