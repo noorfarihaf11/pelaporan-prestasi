@@ -3,9 +3,10 @@ package routes
 import (
 	"database/sql"
 
-	"github.com/gofiber/fiber/v2"
 	"pelaporan-prestasi/app/service"
 	"pelaporan-prestasi/middleware"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func UserRoutes(api fiber.Router, db *sql.DB) {
@@ -14,7 +15,7 @@ func UserRoutes(api fiber.Router, db *sql.DB) {
 		return service.GetAllUserService(c, db)
 	})
 
-	api.Get("/users/:id", func(c *fiber.Ctx) error {
+	api.Get("/users/:id", middleware.RBAC("user:manage", db), func(c *fiber.Ctx) error {
 		return service.GetUserByIDService(c, db)
 	})
 	api.Post("/users", func(c *fiber.Ctx) error {
