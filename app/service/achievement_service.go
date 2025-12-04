@@ -291,7 +291,7 @@ func SoftDeleteAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql
 func SubmitAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
     id := c.Params("id")
 
-    err := repository.SubmitAchievement(mongoDB, id)
+    err := repository.UpdateAchievementStatus(mongoDB, id, "submitted")
     if err != nil {
         return c.Status(400).JSON(fiber.Map{
             "status":  "error",
@@ -300,6 +300,41 @@ func SubmitAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
     }
 
     err = repository.UpdateAchievementReference(db, id, "submitted")
+    if err != nil {
+        msg := err.Error()
+
+        if msg == "reference_not_found" {
+            return c.Status(404).JSON(fiber.Map{
+                "status":  "error",
+                "message": "achievement_reference_not_found",
+            })
+        }
+
+        return c.Status(500).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed submit",
+            "detail":  msg,
+        })
+    }
+
+    return c.Status(200).JSON(fiber.Map{
+        "status":  "success",
+        "message": "achievement submitted successfully",
+    })
+}
+
+func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
+    id := c.Params("id")
+
+    err := repository.UpdateAchievementStatus(mongoDB, id, "verified")
+    if err != nil {
+        return c.Status(400).JSON(fiber.Map{
+            "status":  "error",
+            "message": err.Error(),
+        })
+    }
+
+    err = repository.UpdateAchievementReference(db, id, "verified")
     if err != nil {
         msg := err.Error()
 

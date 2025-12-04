@@ -117,24 +117,27 @@ func SoftDeleteAchievement(db *mongo.Database, id string) error {
 	return err
 }
 
-func SubmitAchievement(db *mongo.Database, id string) error {
-	collection := db.Collection("achievements")
+func UpdateAchievementStatus(db *mongo.Database, id string, status string) error {
+    collection := db.Collection("achievements")
 
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
+    objID, err := primitive.ObjectIDFromHex(id)
+    if err != nil {
+        return fmt.Errorf("invalid_id: %v", err)
+    }
 
-	_, err = collection.UpdateOne(
-		context.Background(),
-		bson.M{"_id": objID},
-		bson.M{
-			"$set": bson.M{
-				"status": "submitted",
-			},
-		},
-	)
-	return err
+    _, err = collection.UpdateOne(
+        context.Background(),
+        bson.M{"_id": objID},
+        bson.M{
+            "$set": bson.M{
+                "status": status,
+                "updated_at": time.Now(),
+            },
+        },
+    )
+    if err != nil {
+        return fmt.Errorf("mongo_update_error: %v", err)
+    }
+
+    return nil
 }
-
-//test

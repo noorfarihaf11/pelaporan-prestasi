@@ -27,11 +27,16 @@ func AchievementRoutes(api fiber.Router, db *sql.DB, mongoDB *mongo.Database) {
         return service.UpdateAchievementService(c, mongoDB, db)
     })
 
-	api.Put("/achievements/delete/:id", func(c *fiber.Ctx) error {
+	api.Delete("/achievements/delete/:id", func(c *fiber.Ctx) error {
         return service.SoftDeleteAchievementService(c, mongoDB, db)
     })
 
-	api.Post("/achievements/delete/:id", func(c *fiber.Ctx) error {
-        return service.SoftDeleteAchievementService(c, mongoDB, db)
+	api.Post("/achievements/:id/submit", middleware.RBAC("achievement:submit", db), func(c *fiber.Ctx) error {
+        return service.SubmitAchievementService(c, mongoDB, db)
     })
+
+	api.Post("/achievements/:id/verify", middleware.RBAC("achievement:verify", db), func(c *fiber.Ctx) error {
+        return service.VerifyAchievementService(c, mongoDB, db)
+    })
+
 }
