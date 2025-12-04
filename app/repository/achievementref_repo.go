@@ -44,4 +44,28 @@ func UpdateAchievementReference(db *sql.DB, mongoID string, status string) error
 
     return nil
 }
+func RejectAchievementReference(db *sql.DB, mongoID string, rejectionNote string) error {
+    query := `
+        UPDATE achievement_references
+        SET status = 'rejected',
+            rejection_note = $1,
+            updated_at = NOW()
+        WHERE mongo_achievement_id = $2
+        RETURNING id;
+    `
+
+    var refID string
+    err := db.QueryRow(query, rejectionNote, mongoID).Scan(&refID)
+
+    if err == sql.ErrNoRows {
+        return fmt.Errorf("reference_not_found")
+    }
+
+    if err != nil {
+        return fmt.Errorf("db_error: %v", err)
+    }
+
+    return nil
+}
+
 

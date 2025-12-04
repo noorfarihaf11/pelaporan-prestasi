@@ -7,6 +7,7 @@ import (
 	"pelaporan-prestasi/app/model"
 	"pelaporan-prestasi/app/repository"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -326,18 +327,97 @@ func SubmitAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
     id := c.Params("id")
 
-    err := repository.UpdateAchievementStatus(mongoDB, id, "verified")
+    achievement, err := repository.GetAchievementByID(mongoDB, id)
     if err != nil {
-        return c.Status(400).JSON(fiber.Map{
+        return c.Status(404).JSON(fiber.Map{
             "status":  "error",
-            "message": err.Error(),
+            "message": "achievement_not_found",
+        })
+    }
+
+    if achievement.Status != "submitted" {
+        return c.Status(400).JSON(fiber.Map{
+            "status":        "error",
+            "message":       "achievement_must_be_submitted_to_verify",
+            "current_status": achievement.Status,
+        })
+    }
+
+    err = repository.UpdateAchievementStatus(mongoDB, id, "verified")
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed_update_achievement_mongo",
+            "detail":  err.Error(),
         })
     }
 
     err = repository.UpdateAchievementReference(db, id, "verified")
     if err != nil {
-        msg := err.Error()
+        if err.Error() == "reference_not_found" {
+            return c.Status(404).JSON(fiber.Map{
+                "status":  "error",
+                "message": "achievement_reference_not_found",
+            })
+        }
+        return c.Status(500).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed_update_reference_postgres",
+            "detail":  err.Error(),
+        })
+    }
 
+    return c.Status(200).JSON(fiber.Map{
+        "status":  "success",
+        "message": "achievement verified successfully",
+    })
+}
+
+func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
+    id := c.Params("id")
+
+    // Ambil body untuk rejection note
+    var body struct {
+        RejectionNote string `json:"rejection_note"`
+    }
+    if err := c.BodyParser(&body); err != nil || strings.TrimSpace(body.RejectionNote) == "" {
+        return c.Status(400).JSON(fiber.Map{
+            "status":  "error",
+            "message": "rejection_note_is_required",
+        })
+    }
+
+    // Ambil data achievement untuk cek precondition
+    achievement, err := repository.GetAchievementByID(mongoDB, id)
+    if err != nil {
+        return c.Status(404).JSON(fiber.Map{
+            "status":  "error",
+            "message": "achievement_not_found",
+        })
+    }
+
+    if achievement.Status != "submitted" && achievement.Status != "verified" {
+        return c.Status(400).JSON(fiber.Map{
+            "status":         "error",
+            "message":        "achievement_must_be_submitted_or_verified_to_reject",
+            "current_status": achievement.Status,
+        })
+    }
+
+    // Update status di MongoDB
+    err = repository.UpdateAchievementStatus(mongoDB, id, "rejected")
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed_update_achievement_status",
+            "detail":  err.Error(),
+        })
+    }
+
+    // Update reference di PostgreSQL dengan rejection note
+    err = repository.RejectAchievementReference(db, id, body.RejectionNote)
+    if err != nil {
+        msg := err.Error()
         if msg == "reference_not_found" {
             return c.Status(404).JSON(fiber.Map{
                 "status":  "error",
@@ -347,13 +427,13 @@ func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 
         return c.Status(500).JSON(fiber.Map{
             "status":  "error",
-            "message": "failed submit",
+            "message": "failed_update_achievement_reference",
             "detail":  msg,
         })
     }
 
     return c.Status(200).JSON(fiber.Map{
         "status":  "success",
-        "message": "achievement verified successfully",
+        "message": "achievement rejected successfully",
     })
 }

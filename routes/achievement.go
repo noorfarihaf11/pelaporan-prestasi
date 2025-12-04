@@ -39,4 +39,8 @@ func AchievementRoutes(api fiber.Router, db *sql.DB, mongoDB *mongo.Database) {
         return service.VerifyAchievementService(c, mongoDB, db)
     })
 
+	api.Post("/achievements/:id/reject", middleware.RBAC("achievement:reject", db), func(c *fiber.Ctx) error {
+        return service.RejectAchievementService(c, mongoDB, db)
+    })
+
 }
