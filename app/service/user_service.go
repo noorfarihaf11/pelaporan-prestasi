@@ -2,6 +2,7 @@ package service
 
 import (
 	"database/sql"
+	"fmt"
 	"pelaporan-prestasi/app/model"
 	"pelaporan-prestasi/app/repository"
 	"pelaporan-prestasi/utils"
@@ -149,7 +150,7 @@ func CreateUserService(c *fiber.Ctx, db *sql.DB) error {
         CreatedAt:    time.Now(),
         UpdatedAt:    time.Now(),
     }
-
+    
     user, err = repository.CreateUserTx(tx, user)
     if err != nil {
         return c.Status(500).JSON(fiber.Map{
@@ -187,12 +188,14 @@ func CreateUserService(c *fiber.Ctx, db *sql.DB) error {
         }
 
         err = repository.CreateStudentTx(tx, student_profile)
-        if err != nil {
+       if err != nil {
+            fmt.Println("Repository error:", err)
             return c.Status(500).JSON(fiber.Map{
                 "status":  "error",
                 "message": "failed_creating_student_profile",
             })
         }
+
 
         student_result = student_profile
     }

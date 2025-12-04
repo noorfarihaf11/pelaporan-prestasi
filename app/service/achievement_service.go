@@ -3,6 +3,7 @@ package service
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"pelaporan-prestasi/app/model"
 	"pelaporan-prestasi/app/repository"
 	"strconv"
@@ -23,31 +24,55 @@ func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
         })
     }
 
-    studentID := form.Value["student_id"][0]
-    achievementType := form.Value["achievement_type"][0]
-    title := form.Value["title"][0]
-    description := form.Value["description"][0]
+   rawStudentID := c.Locals("student_id")
+    studentIDStr, ok := rawStudentID.(string)
+    if !ok || studentIDStr == "" {
+        return c.Status(400).JSON(fiber.Map{
+            "status":  "error",
+            "message": "invalid_or_missing_student_id_in_token",
+        })
+    }
+
+    studentUUID, err := uuid.Parse(studentIDStr)
+    if err != nil {
+        return c.Status(400).JSON(fiber.Map{
+            "status":  "error",
+            "message": "student_id_not_uuid",
+        })
+    }
+    fmt.Println("STUDENT UUID TOKEN:", studentUUID)
+
+    getValue := func(key string) string {
+        if arr, ok := form.Value[key]; ok && len(arr) > 0 {
+            return arr[0]
+        }
+        return ""
+    }
+
+    achievementType := getValue("achievement_type")
+    title := getValue("title")
+    description := getValue("description")
+    status := getValue("status")
+    if status == "" {
+        status = "draft"
+    }
+
+    pointsStr := getValue("points")
     points := 0
-
-	status := "draft"
-	if len(form.Value["status"]) > 0 {
-		status = form.Value["status"][0]
-	}
-
-
-    if len(form.Value["points"]) > 0 {
-        points, _ = strconv.Atoi(form.Value["points"][0])
+    if pointsStr != "" {
+        points, _ = strconv.Atoi(pointsStr)
     }
 
     tags := []string{}
-    if len(form.Value["tags"]) > 0 {
-        json.Unmarshal([]byte(form.Value["tags"][0]), &tags)
+    if tagsStr := getValue("tags"); tagsStr != "" {
+        json.Unmarshal([]byte(tagsStr), &tags)
     }
 
     var details map[string]interface{}
-    if len(form.Value["details"]) > 0 {
-        json.Unmarshal([]byte(form.Value["details"][0]), &details)
+    if detailsStr := getValue("details"); detailsStr != "" {
+        json.Unmarshal([]byte(detailsStr), &details)
     }
+
 
     files := form.File["attachments"]
     var attachments []model.Attachment
@@ -63,26 +88,26 @@ func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
         }
 
         attachments = append(attachments, model.Attachment{
-            FileName: file.Filename,
-            FileUrl:  path,
-            FileType: file.Header.Get("Content-Type"),
+            FileName:   file.Filename,
+            FileUrl:    path,
+            FileType:   file.Header.Get("Content-Type"),
             UploadedAt: time.Now(),
         })
     }
 
     ach := model.Achievement{
-        StudentID: studentID,
+        StudentID:       studentIDStr,
         AchievementType: achievementType,
-        Title: title,
-        Description: description,
-        Details: details,
-        Tags: tags,
-        Points: points,
-        Attachments: attachments,
-		Status: status,
+        Title:           title,
+        Description:     description,
+        Details:         details,
+        Tags:            tags,
+        Points:          points,
+        Attachments:     attachments,
+        Status:          status,
     }
 
-     result, err := repository.CreateAchievement(mongoDB, &ach)
+    result, err := repository.CreateAchievement(mongoDB, &ach)
     if err != nil {
         return c.Status(500).JSON(fiber.Map{
             "status":  "error",
@@ -90,13 +115,11 @@ func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
         })
     }
 
-    studentUUID, _ := uuid.Parse(ach.StudentID)
-
     err = repository.CreateAchievementReference(db, studentUUID, result.ID.Hex())
     if err != nil {
         return c.Status(500).JSON(fiber.Map{
             "status":  "error",
-            "message": "failed_create_achievement_reference_postgres",
+            "message": err.Error(), 
         })
     }
 
@@ -108,6 +131,7 @@ func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
         },
     })
 }
+
 
 func GetAllAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database) error {
 	list, err := repository.GetAllAchievements(mongoDB)

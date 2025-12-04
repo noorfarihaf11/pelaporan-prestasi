@@ -3,6 +3,7 @@ package routes
 import (
 	"database/sql"
 	"pelaporan-prestasi/app/service"
+	"pelaporan-prestasi/middleware"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -10,7 +11,7 @@ import (
 
 func AchievementRoutes(api fiber.Router, db *sql.DB, mongoDB *mongo.Database) {
 
-    api.Post("/achievements", func(c *fiber.Ctx) error {
+    api.Post("/achievements", middleware.RBAC("achievement:create", db), func(c *fiber.Ctx) error {
         return service.CreateAchievementService(c, mongoDB, db)
     })
 

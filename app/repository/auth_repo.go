@@ -5,6 +5,8 @@ import (
 	"errors"
 	"pelaporan-prestasi/app/model"
 	_ "time"
+
+	"github.com/google/uuid"
 )
 
 func RegisterUser(db *sql.DB, user *model.User) (*model.User, error) {
@@ -36,32 +38,39 @@ func RegisterUser(db *sql.DB, user *model.User) (*model.User, error) {
 }
 
 func LoginUser(db *sql.DB, identifier string) (*model.User, string, error) {
-	var user model.User
-	var passwordHash string
+    var user model.User
+    var passwordHash string
+    var studentID *uuid.UUID // karena student bisa NULL
 
-	query := `
-		SELECT id, username, email, password_hash, full_name, role_id, is_active, updated_at, created_at
-		FROM users
-        WHERE username = $1
-	`
+    query := `
+        SELECT 
+            u.id,
+            u.username,
+            u.full_name,
+            u.role_id,
+            u.password_hash,
+            s.id AS student_id
+        FROM users u
+        LEFT JOIN students s ON s.user_id = u.id
+        WHERE u.username = $1
+    `
 
-	err := db.QueryRow(query, identifier).Scan(
-		&user.ID,
-		&user.Username,
-		&user.Email,
-		&passwordHash,
-		&user.FullName,
-		&user.RoleID,
-		&user.IsActive,
-		&user.UpdatedAt,
-		&user.CreatedAt,
-	)
+    err := db.QueryRow(query, identifier).Scan(
+        &user.ID,
+        &user.Username,
+        &user.FullName,
+        &user.RoleID,
+        &passwordHash,
+        &studentID,
+    )
 
-	if err != nil {
-		return nil, "", errors.New("user tidak ditemukan")
-	}
+    if err != nil {
+        return nil, "", errors.New("user tidak ditemukan")
+    }
 
-	return &user, passwordHash, nil
+    user.StudentID = studentID
+
+    return &user, passwordHash, nil
 }
 
 func GetProfile(db *sql.DB, userID string) (*model.User, error) {

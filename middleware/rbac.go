@@ -45,6 +45,12 @@ func RBAC(permission string, db *sql.DB) fiber.Handler {
 				"message": "missing_role_claim",
 			})
 		}
+		
+		c.Locals("user_id", claims.UserID.String())
+        c.Locals("username", claims.Username)
+        c.Locals("role_id", claims.RoleID.String())
+		c.Locals("student_id", claims.StudentID.String())
+
 
 		var exists bool
 		err = db.QueryRow(`

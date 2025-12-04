@@ -15,16 +15,12 @@ func CreateAchievementReference(db *sql.DB, studentID uuid.UUID, mongoID string)
         VALUES ($1, $2, $3, 'draft', $4, $5)
     `
 
-    _, err := db.Exec(
-        query,
-        uuid.New(),       // id
-        studentID,
-        mongoID,          // hex string MongoDB _id
-        time.Now(),
-        time.Now(),
-    )
+    _, err := db.Exec(query, uuid.New(), studentID, mongoID, time.Now(), time.Now())
+    if err != nil {
+        return fmt.Errorf("postgres_error: %v", err)
+    }
 
-    return err
+    return nil
 }
 
 func UpdateAchievementReference(db *sql.DB, mongoID string, status string) error {

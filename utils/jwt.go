@@ -14,6 +14,7 @@ func GenerateToken(user model.User) (string, error) {
 		UserID:   user.ID,
 		Username: user.Username,
 		RoleID:   user.RoleID,
+		StudentID: user.StudentID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
