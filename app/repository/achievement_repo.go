@@ -2,10 +2,12 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"pelaporan-prestasi/app/model"
 	"time"
 
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -31,7 +33,7 @@ func CreateAchievement(db *mongo.Database, ach *model.Achievement) (*model.Achie
 	return ach, nil
 }
 
-func GetAllAchievements(db *mongo.Database) ([]model.Achievement, error) {
+func GetAllAchievements(db *mongo.Database, sqlDB *sql.DB) ([]model.AchievementResponse, error) {
 	collection := db.Collection("achievements")
 
 	cursor, err := collection.Find(context.Background(), bson.M{})
@@ -40,19 +42,44 @@ func GetAllAchievements(db *mongo.Database) ([]model.Achievement, error) {
 	}
 	defer cursor.Close(context.Background())
 
-	var list []model.Achievement
+	var list []model.AchievementResponse
 	for cursor.Next(context.Background()) {
-		var a model.Achievement
+		var a model.AchievementResponse
 		if err := cursor.Decode(&a); err != nil {
 			return nil, err
 		}
+
+		var advisorID string
+        studentUUID, err := uuid.Parse(a.StudentID) // a.StudentID harus UUID
+        if err != nil {
+            // Kalau StudentID tidak valid UUID, skip atau set advisorID kosong
+            a.AdvisorID = ""
+        } else {
+            err = sqlDB.QueryRow("SELECT advisor_id FROM students WHERE id=$1", studentUUID).Scan(&advisorID)
+            if err != nil && err != sql.ErrNoRows {
+                return nil, err
+            }
+            a.AdvisorID = advisorID
+        }
+
+		// Ambil reference dari PostgreSQL
+		ref, err := GetAchievementReferenceByMongoID(sqlDB, a.ID.Hex())
+		if err != nil {
+			return nil, err
+		}
+		if ref != nil {
+			a.VerifiedAt = ref.VerifiedAt
+			a.VerifiedBy = ref.VerifiedBy
+			a.RejectionNote = ref.RejectionNote
+		}
+
 		list = append(list, a)
 	}
 
 	return list, nil
 }
 
-func GetAchievementByID(db *mongo.Database, id string) (*model.Achievement, error) {
+func GetAchievementByID(db *mongo.Database, sqlDB *sql.DB, id string) (*model.AchievementResponse, error) {
 	collection := db.Collection("achievements")
 
 	objID, err := primitive.ObjectIDFromHex(id)
@@ -60,19 +87,50 @@ func GetAchievementByID(db *mongo.Database, id string) (*model.Achievement, erro
 		return nil, err
 	}
 
-	var ach model.Achievement
+	var ach model.AchievementResponse
 	err = collection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&ach)
-
 	if err == mongo.ErrNoDocuments {
 		return nil, nil
 	}
-
 	if err != nil {
 		return nil, err
 	}
 
+	// Ambil reference
+	ref, err := GetAchievementReferenceByMongoID(sqlDB, id)
+	if err != nil {
+		return nil, err
+	}
+	if ref != nil {
+		ach.VerifiedAt = ref.VerifiedAt
+		ach.VerifiedBy = ref.VerifiedBy
+		ach.RejectionNote = ref.RejectionNote
+	}
+
+	var advisorID string
+    studentUUID, err := uuid.Parse(ach.StudentID)
+    if err == nil {
+        _ = sqlDB.QueryRow("SELECT advisor_id FROM students WHERE id=$1", studentUUID).Scan(&advisorID)
+    }
+    ach.AdvisorID = advisorID
+
 	return &ach, nil
 }
+
+// Helper function untuk ambil advisor_id
+func GetAdvisorIDByStudentID(db *sql.DB, studentID string) (*string, error) {
+	var advisorID *string
+	query := `SELECT advisor_id FROM students WHERE id = $1`
+	err := db.QueryRow(query, studentID).Scan(&advisorID)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return advisorID, nil
+}
+
 
 func UpdateAchievement(db *mongo.Database, id string, update bson.M) (*model.Achievement, error) {
 	collection := db.Collection("achievements")

@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"pelaporan-prestasi/app/model"
 	"time"
 
 	"github.com/google/uuid"
@@ -68,4 +69,28 @@ func RejectAchievementReference(db *sql.DB, mongoID string, rejectionNote string
     return nil
 }
 
+func GetAchievementReferenceByMongoID(db *sql.DB, mongoID string) (*model.AchievementReference, error) {
+	query := `
+		SELECT id, verified_at, verified_by, rejection_note
+		FROM achievement_references
+		WHERE mongo_achievement_id = $1
+	`
 
+	ref := model.AchievementReference{}
+	err := db.QueryRow(query, mongoID).Scan(
+		&ref.ID,
+		&ref.VerifiedAt,
+		&ref.VerifiedBy,
+		&ref.RejectionNote,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil 
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ref, nil
+}

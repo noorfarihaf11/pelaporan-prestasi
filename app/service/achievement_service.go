@@ -133,13 +133,13 @@ func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
     })
 }
 
-
-func GetAllAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database) error {
-	list, err := repository.GetAllAchievements(mongoDB)
+func GetAllAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB) error {
+	list, err := repository.GetAllAchievements(mongoDB, sqlDB)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
 			"message": "failed_fetch_achievements",
+			"detail":  err.Error(),
 		})
 	}
 
@@ -151,14 +151,17 @@ func GetAllAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database) error {
 		},
 	})
 }
-func GetAchievementByIDService(c *fiber.Ctx, mongoDB *mongo.Database) error {
+
+// Get achievement by ID
+func GetAchievementByIDService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB) error {
 	id := c.Params("id")
 
-	ach, err := repository.GetAchievementByID(mongoDB, id)
+	ach, err := repository.GetAchievementByID(mongoDB, sqlDB, id)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
 			"message": "failed_fetch_achievement",
+			"detail":  err.Error(),
 		})
 	}
 
@@ -327,7 +330,7 @@ func SubmitAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
     id := c.Params("id")
 
-    achievement, err := repository.GetAchievementByID(mongoDB, id)
+    achievement, err := repository.GetAchievementByID(mongoDB, db, id)
     if err != nil {
         return c.Status(404).JSON(fiber.Map{
             "status":  "error",
@@ -388,7 +391,7 @@ func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
     }
 
     // Ambil data achievement untuk cek precondition
-    achievement, err := repository.GetAchievementByID(mongoDB, id)
+    achievement, err := repository.GetAchievementByID(mongoDB, db, id)
     if err != nil {
         return c.Status(404).JSON(fiber.Map{
             "status":  "error",

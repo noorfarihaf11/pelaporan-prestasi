@@ -16,11 +16,11 @@ func AchievementRoutes(api fiber.Router, db *sql.DB, mongoDB *mongo.Database) {
     })
 
 	api.Get("/achievements", func(c *fiber.Ctx) error {
-		return service.GetAllAchievementsService(c, mongoDB)
+		return service.GetAllAchievementsService(c, mongoDB, db)
 	})
 
 	api.Get("/achievements/:id", func(c *fiber.Ctx) error {
-		return service.GetAchievementByIDService(c, mongoDB)
+		return service.GetAchievementByIDService(c, mongoDB, db)
 	})
 
 	api.Put("/achievements/:id", func(c *fiber.Ctx) error {
