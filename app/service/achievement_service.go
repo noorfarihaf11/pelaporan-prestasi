@@ -354,6 +354,6 @@ func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 
     return c.Status(200).JSON(fiber.Map{
         "status":  "success",
-        "message": "achievement submitted successfully",
+        "message": "achievement verified successfully",
     })
 }

@@ -10,73 +10,77 @@ import (
 )
 
 func RBAC(permission string, db *sql.DB) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+    return func(c *fiber.Ctx) error {
 
-		authHeader := c.Get("Authorization")
-		if authHeader == "" {
-			return c.Status(401).JSON(fiber.Map{
-				"status":  "error",
-				"message": "missing_token",
-			})
+        authHeader := c.Get("Authorization")
+        if authHeader == "" {
+            return c.Status(401).JSON(fiber.Map{
+                "status":  "error",
+                "message": "missing_token",
+            })
+        }
+
+        if !strings.HasPrefix(authHeader, "Bearer ") {
+            return c.Status(401).JSON(fiber.Map{
+                "status":  "error",
+                "message": "invalid_token_format",
+            })
+        }
+
+        tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+        claims, err := utils.ValidateToken(tokenString)
+        if err != nil {
+            return c.Status(401).JSON(fiber.Map{
+                "status":  "error",
+                "message": "invalid_token",
+            })
+        }
+
+        roleID := claims.RoleID
+
+        if roleID == uuid.Nil {
+            return c.Status(401).JSON(fiber.Map{
+                "status":  "error",
+                "message": "missing_role_claim",
+            })
+        }
+
+		studentID := ""
+		if claims.StudentID != nil {
+			studentID = claims.StudentID.String()
 		}
 
-		if !strings.HasPrefix(authHeader, "Bearer ") {
-			return c.Status(401).JSON(fiber.Map{
-				"status":  "error",
-				"message": "invalid_token_format",
-			})
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-
-		claims, err := utils.ValidateToken(tokenString)
-		if err != nil {
-			return c.Status(401).JSON(fiber.Map{
-				"status":  "error",
-				"message": "invalid_token",
-			})
-		}
-
-		roleID := claims.RoleID
-
-		if roleID == uuid.Nil {
-			return c.Status(401).JSON(fiber.Map{
-				"status":  "error",
-				"message": "missing_role_claim",
-			})
-		}
-		
-		c.Locals("user_id", claims.UserID.String())
+        c.Locals("user_id", claims.UserID.String())
         c.Locals("username", claims.Username)
         c.Locals("role_id", claims.RoleID.String())
-		c.Locals("student_id", claims.StudentID.String())
+		c.Locals("student_id", studentID)
 
+        var exists bool
+        err = db.QueryRow(`
+            SELECT EXISTS (
+                SELECT 1 
+                FROM role_permissions rp
+                JOIN permissions p ON p.id = rp.permission_id
+                WHERE rp.role_id = $1
+                AND p.name = $2
+            )
+        `, roleID, permission).Scan(&exists)
 
-		var exists bool
-		err = db.QueryRow(`
-			SELECT EXISTS (
-				SELECT 1 
-				FROM role_permissions rp
-				JOIN permissions p ON p.id = rp.permission_id
-				WHERE rp.role_id = $1
-				AND p.name = $2
-			)
-		`, roleID, permission).Scan(&exists)
+        if err != nil {
+            return c.Status(500).JSON(fiber.Map{
+                "status":  "error",
+                "message": "db_error_permission_check",
+            })
+        }
 
-		if err != nil {
-			return c.Status(500).JSON(fiber.Map{
-				"status":  "error",
-				"message": "db_error_permission_check",
-			})
-		}
+        if !exists {
+            return c.Status(403).JSON(fiber.Map{
+                "status":  "error",
+                "message": "forbidden",
+            })
+        }
 
-		if !exists {
-			return c.Status(403).JSON(fiber.Map{
-				"status":  "error",
-				"message": "forbidden",
-			})
-		}
-
-		return c.Next()
-	}
+        return c.Next()
+    }
 }
