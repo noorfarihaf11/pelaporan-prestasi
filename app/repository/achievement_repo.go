@@ -199,3 +199,46 @@ func UpdateAchievementStatus(db *mongo.Database, id string, status string) error
 
     return nil
 }
+
+func GetAchievementsByStudentID(db *mongo.Database, sqlDB *sql.DB, studentID string) ([]model.AchievementResponse, error) {
+	collection := db.Collection("achievements")
+
+	cursor, err := collection.Find(context.Background(), bson.M{"student_id": studentID})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var achievements []model.AchievementResponse
+	for cursor.Next(context.Background()) {
+		var ach model.AchievementResponse
+		if err := cursor.Decode(&ach); err != nil {
+			return nil, err
+		}
+
+		ref, err := GetAchievementReferenceByMongoID(sqlDB, ach.ID.Hex())
+		if err != nil {
+			return nil, err
+		}
+		if ref != nil {
+			ach.VerifiedAt = ref.VerifiedAt
+			ach.VerifiedBy = ref.VerifiedBy
+			ach.RejectionNote = ref.RejectionNote
+		}
+
+		var advisorID string
+		studentUUID, err := uuid.Parse(studentID)
+		if err == nil {
+			_ = sqlDB.QueryRow("SELECT advisor_id FROM students WHERE id=$1", studentUUID).Scan(&advisorID)
+		}
+		ach.AdvisorID = advisorID
+
+		achievements = append(achievements, ach)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return achievements, nil
+}

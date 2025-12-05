@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
 	"pelaporan-prestasi/app/model"
 
 	"github.com/google/uuid"
@@ -83,4 +84,34 @@ func GetStudentByID(db *sql.DB, id string) (*model.Student, error) {
 	}
 
 	return &s, nil
+}
+
+func UpdateStudentAdvisor(db *sql.DB, studentID string, advisorID string) error {
+	studentUUID, err := uuid.Parse(studentID)
+	if err != nil {
+		return fmt.Errorf("invalid_student_id")
+	}
+
+	advisorUUID, err := uuid.Parse(advisorID)
+	if err != nil {
+		return fmt.Errorf("invalid_advisor_id")
+	}
+
+	query := `
+		UPDATE students
+		SET advisor_id = $1
+		WHERE id = $2
+		RETURNING id
+	`
+
+	var returnedID string
+	err = db.QueryRow(query, advisorUUID, studentUUID).Scan(&returnedID)
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("student_not_found")
+	}
+	if err != nil {
+		return fmt.Errorf("db_error: %v", err)
+	}
+
+	return nil
 }

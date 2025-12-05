@@ -2,6 +2,7 @@ package service
 
 import (
 	"database/sql"
+	"pelaporan-prestasi/app/model"
 	"pelaporan-prestasi/app/repository"
 	"pelaporan-prestasi/utils"
 
@@ -94,5 +95,50 @@ func GetStudentByIDService(c *fiber.Ctx, db *sql.DB) error {
 		"data": fiber.Map{
 			"student": student,
 		},
+	})
+}
+func UpdateStudentAdvisorService(c *fiber.Ctx, db *sql.DB) error {
+	studentID := c.Params("id")
+	var req model.UpdateAdvisorRequest
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"status":  "error",
+			"message": "invalid_request_body",
+		})
+	}
+
+	if req.AdvisorID == "" {
+		return c.Status(400).JSON(fiber.Map{
+			"status":  "error",
+			"message": "advisor_id_required",
+		})
+	}
+
+	err := repository.UpdateStudentAdvisor(db, studentID, req.AdvisorID)
+	if err != nil {
+		switch err.Error() {
+		case "invalid_student_id", "invalid_advisor_id":
+			return c.Status(400).JSON(fiber.Map{
+				"status":  "error",
+				"message": err.Error(),
+			})
+		case "student_not_found":
+			return c.Status(404).JSON(fiber.Map{
+				"status":  "error",
+				"message": "student_not_found",
+			})
+		default:
+			return c.Status(500).JSON(fiber.Map{
+				"status":  "error",
+				"message": "failed_update_advisor",
+				"detail":  err.Error(),
+			})
+		}
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"status":  "success",
+		"message": "advisor_updated",
 	})
 }

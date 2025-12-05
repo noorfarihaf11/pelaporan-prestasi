@@ -152,7 +152,6 @@ func GetAllAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql
 	})
 }
 
-// Get achievement by ID
 func GetAchievementByIDService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB) error {
 	id := c.Params("id")
 
@@ -379,7 +378,6 @@ func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
     id := c.Params("id")
 
-    // Ambil body untuk rejection note
     var body struct {
         RejectionNote string `json:"rejection_note"`
     }
@@ -390,7 +388,6 @@ func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
         })
     }
 
-    // Ambil data achievement untuk cek precondition
     achievement, err := repository.GetAchievementByID(mongoDB, db, id)
     if err != nil {
         return c.Status(404).JSON(fiber.Map{
@@ -407,7 +404,6 @@ func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
         })
     }
 
-    // Update status di MongoDB
     err = repository.UpdateAchievementStatus(mongoDB, id, "rejected")
     if err != nil {
         return c.Status(500).JSON(fiber.Map{
@@ -417,7 +413,6 @@ func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
         })
     }
 
-    // Update reference di PostgreSQL dengan rejection note
     err = repository.RejectAchievementReference(db, id, body.RejectionNote)
     if err != nil {
         msg := err.Error()
@@ -439,4 +434,32 @@ func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
         "status":  "success",
         "message": "achievement rejected successfully",
     })
+}
+
+func GetAchievementsByStudentIDService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB) error {
+	id := c.Params("id")
+
+	achievements, err := repository.GetAchievementsByStudentID(mongoDB, sqlDB, id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "failed_fetch_achievements",
+			"detail":  err.Error(),
+		})
+	}
+
+	if len(achievements) == 0 {
+		return c.Status(404).JSON(fiber.Map{
+			"status":  "error",
+			"message": "no_achievements_found_for_student",
+		})
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"status":  "success",
+		"message": "success_get_achievements",
+		"data": fiber.Map{
+			"achievements": achievements,
+		},
+	})
 }

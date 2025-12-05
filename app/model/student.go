@@ -14,3 +14,7 @@ type Student struct {
 	AdvisorID    *uuid.UUID `json:"advisor_id"`
 	CreatedAt    time.Time 	`json:"created_at"`
 }
+
+type UpdateAdvisorRequest struct {
+	AdvisorID string `json:"advisor_id"`
+}
