@@ -50,17 +50,17 @@ func GetAllAchievements(db *mongo.Database, sqlDB *sql.DB) ([]model.AchievementR
 		}
 
 		var advisorID string
-        studentUUID, err := uuid.Parse(a.StudentID) // a.StudentID harus UUID
-        if err != nil {
-            // Kalau StudentID tidak valid UUID, skip atau set advisorID kosong
-            a.AdvisorID = ""
-        } else {
-            err = sqlDB.QueryRow("SELECT advisor_id FROM students WHERE id=$1", studentUUID).Scan(&advisorID)
-            if err != nil && err != sql.ErrNoRows {
-                return nil, err
-            }
-            a.AdvisorID = advisorID
-        }
+		studentUUID, err := uuid.Parse(a.StudentID) // a.StudentID harus UUID
+		if err != nil {
+			// Kalau StudentID tidak valid UUID, skip atau set advisorID kosong
+			a.AdvisorID = ""
+		} else {
+			err = sqlDB.QueryRow("SELECT advisor_id FROM students WHERE id=$1", studentUUID).Scan(&advisorID)
+			if err != nil && err != sql.ErrNoRows {
+				return nil, err
+			}
+			a.AdvisorID = advisorID
+		}
 
 		// Ambil reference dari PostgreSQL
 		ref, err := GetAchievementReferenceByMongoID(sqlDB, a.ID.Hex())
@@ -108,11 +108,11 @@ func GetAchievementByID(db *mongo.Database, sqlDB *sql.DB, id string) (*model.Ac
 	}
 
 	var advisorID string
-    studentUUID, err := uuid.Parse(ach.StudentID)
-    if err == nil {
-        _ = sqlDB.QueryRow("SELECT advisor_id FROM students WHERE id=$1", studentUUID).Scan(&advisorID)
-    }
-    ach.AdvisorID = advisorID
+	studentUUID, err := uuid.Parse(ach.StudentID)
+	if err == nil {
+		_ = sqlDB.QueryRow("SELECT advisor_id FROM students WHERE id=$1", studentUUID).Scan(&advisorID)
+	}
+	ach.AdvisorID = advisorID
 
 	return &ach, nil
 }
@@ -130,7 +130,6 @@ func GetAdvisorIDByStudentID(db *sql.DB, studentID string) (*string, error) {
 	}
 	return advisorID, nil
 }
-
 
 func UpdateAchievement(db *mongo.Database, id string, update bson.M) (*model.Achievement, error) {
 	collection := db.Collection("achievements")
@@ -176,28 +175,28 @@ func SoftDeleteAchievement(db *mongo.Database, id string) error {
 }
 
 func UpdateAchievementStatus(db *mongo.Database, id string, status string) error {
-    collection := db.Collection("achievements")
+	collection := db.Collection("achievements")
 
-    objID, err := primitive.ObjectIDFromHex(id)
-    if err != nil {
-        return fmt.Errorf("invalid_id: %v", err)
-    }
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return fmt.Errorf("invalid_id: %v", err)
+	}
 
-    _, err = collection.UpdateOne(
-        context.Background(),
-        bson.M{"_id": objID},
-        bson.M{
-            "$set": bson.M{
-                "status": status,
-                "updated_at": time.Now(),
-            },
-        },
-    )
-    if err != nil {
-        return fmt.Errorf("mongo_update_error: %v", err)
-    }
+	_, err = collection.UpdateOne(
+		context.Background(),
+		bson.M{"_id": objID},
+		bson.M{
+			"$set": bson.M{
+				"status":     status,
+				"updated_at": time.Now(),
+			},
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("mongo_update_error: %v", err)
+	}
 
-    return nil
+	return nil
 }
 
 func GetAchievementsByStudentID(db *mongo.Database, sqlDB *sql.DB, studentID string) ([]model.AchievementResponse, error) {
@@ -242,4 +241,37 @@ func GetAchievementsByStudentID(db *mongo.Database, sqlDB *sql.DB, studentID str
 
 	return achievements, nil
 }
+func GetAchievementHistory(db *sql.DB, mongoDB *mongo.Database, mongoID string) ([]model.AchievementHistory, error) {
+	// Ambil status dari MongoDB
+	ach, err := GetAchievementByID(mongoDB, db, mongoID)
+	if err != nil {
+		return nil, err
+	}
+	if ach == nil {
+		return nil, nil
+	}
 
+	history := []model.AchievementHistory{
+		{
+			Status:    ach.Status,
+			UpdatedBy: ach.StudentID,
+			UpdatedAt: ach.UpdatedAt,
+		},
+	}
+
+	// Ambil verified info jika ada
+	if ach.VerifiedAt != nil {
+		var updatedBy string
+		if ach.VerifiedBy != nil {
+			updatedBy = ach.VerifiedBy.String()
+		}
+		history = append(history, model.AchievementHistory{
+			Status:        "verified",
+			UpdatedBy:     updatedBy,
+			UpdatedAt:     *ach.VerifiedAt,
+			RejectionNote: ach.RejectionNote,
+		})
+	}
+
+	return history, nil
+}

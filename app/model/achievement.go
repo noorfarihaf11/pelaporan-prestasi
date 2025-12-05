@@ -48,3 +48,11 @@ type Attachment struct {
     FileType   string    `json:"file_type" bson:"file_type"`
     UploadedAt time.Time `json:"uploaded_at" bson:"uploaded_at"`
 }
+
+type AchievementHistory struct {
+	Status        string     `json:"status"`
+	UpdatedBy     string     `json:"updated_by"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+	RejectionNote *string    `json:"rejection_note,omitempty"`
+}
+

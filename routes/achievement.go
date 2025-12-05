@@ -47,4 +47,8 @@ func AchievementRoutes(api fiber.Router, db *sql.DB, mongoDB *mongo.Database) {
 		return service.GetStatisticsService(c, mongoDB)
 	})
 
+	api.Get("/achievements/:id/history", func(c *fiber.Ctx) error {
+		return service.GetAchievementHistoryService(c, mongoDB, db)
+	})
+
 }

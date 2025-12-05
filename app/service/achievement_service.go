@@ -463,3 +463,80 @@ func GetAchievementsByStudentIDService(c *fiber.Ctx, mongoDB *mongo.Database, sq
 		},
 	})
 }
+func GetAchievementHistoryService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB) error {
+    id := c.Params("id")
+
+    ach, err := repository.GetAchievementByID(mongoDB, sqlDB, id)
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed_fetch_achievement",
+            "detail":  err.Error(),
+        })
+    }
+    if ach == nil {
+        return c.Status(404).JSON(fiber.Map{
+            "status":  "error",
+            "message": "achievement_not_found",
+        })
+    }
+
+    var history []model.AchievementHistory
+
+    // Draft
+    history = append(history, model.AchievementHistory{
+        Status:    "draft",
+        UpdatedAt: ach.CreatedAt,
+        UpdatedBy: ach.StudentID,
+    })
+
+    // Submitted
+    if ach.Status != "draft" {
+        history = append(history, model.AchievementHistory{
+            Status:    "submitted",
+            UpdatedAt: ach.UpdatedAt,
+            UpdatedBy: ach.StudentID,
+        })
+    }
+
+    // Verified
+    if ach.VerifiedAt != nil {
+        updatedBy := ""
+        if ach.VerifiedBy != nil {
+            updatedBy = ach.VerifiedBy.String()
+        }
+        history = append(history, model.AchievementHistory{
+            Status:        "verified",
+            UpdatedAt:     *ach.VerifiedAt,
+            UpdatedBy:     updatedBy,
+            RejectionNote: ach.RejectionNote,
+        })
+    }
+
+    // Rejected
+    if ach.Status == "rejected" && ach.RejectionNote != nil {
+        updatedBy := ""
+        if ach.VerifiedBy != nil {
+            updatedBy = ach.VerifiedBy.String()
+        }
+        updatedAt := time.Now()
+        if ach.VerifiedAt != nil {
+            updatedAt = *ach.VerifiedAt
+        }
+        history = append(history, model.AchievementHistory{
+            Status:        "rejected",
+            UpdatedAt:     updatedAt,
+            UpdatedBy:     updatedBy,
+            RejectionNote: ach.RejectionNote,
+        })
+    }
+
+    return c.Status(200).JSON(fiber.Map{
+        "status":  "success",
+        "message": "success_get_achievement_history",
+        "data": fiber.Map{
+            "history": history,
+        },
+    })
+}
+
