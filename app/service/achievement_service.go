@@ -463,3 +463,19 @@ func GetAchievementsByStudentIDService(c *fiber.Ctx, mongoDB *mongo.Database, sq
 		},
 	})
 }
+func GetStatisticsService(c *fiber.Ctx, db *mongo.Database) error {
+	stats, err := repository.GetAchievementStatistics(db)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "failed_fetch_statistics",
+			"detail":  err.Error(),
+		})
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"status":  "success",
+		"message": "success_get_statistics",
+		"data":    stats,
+	})
+}

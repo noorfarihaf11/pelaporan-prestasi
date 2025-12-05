@@ -43,4 +43,8 @@ func AchievementRoutes(api fiber.Router, db *sql.DB, mongoDB *mongo.Database) {
         return service.RejectAchievementService(c, mongoDB, db)
     })
 
+	api.Get("/reports/statistics", func(c *fiber.Ctx) error {
+		return service.GetStatisticsService(c, mongoDB)
+	})
+
 }
