@@ -61,3 +61,34 @@ func GetAllLecturers(db *sql.DB) ([]model.Lecturer, error) {
 
 	return lecturerList, nil
 }
+func GetAdviseesByLecturerID(db *sql.DB, lecturerID string) ([]model.StudentResponse, error) {
+	advisorUUID, err := uuid.Parse(lecturerID)
+	if err != nil {
+		return nil, err
+	}
+
+	query := `
+		SELECT s.id, u.full_name, s.student_id, s.program_study
+		FROM students s
+		JOIN users u ON u.id = s.user_id
+		WHERE s.advisor_id = $1
+		ORDER BY u.full_name
+	`
+
+	rows, err := db.Query(query, advisorUUID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var advisees []model.StudentResponse
+	for rows.Next() {
+		var s model.StudentResponse
+		if err := rows.Scan(&s.ID, &s.FullName, &s.StudentID, &s.ProgramStudy); err != nil {
+			return nil, err
+		}
+		advisees = append(advisees, s)
+	}
+
+	return advisees, nil
+}

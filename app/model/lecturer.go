@@ -12,3 +12,9 @@ type Lecturer struct {
 	Department    	string	 	`json:"department"` 
 	CreatedAt   	time.Time 	`json:"created_at"`
 }
+type StudentResponse struct {
+	ID           string `json:"id"`
+	FullName     string `json:"full_name"`
+	StudentID    string `json:"student_id"`
+	ProgramStudy string `json:"program_study"`
+}

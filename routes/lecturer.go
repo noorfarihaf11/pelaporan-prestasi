@@ -11,4 +11,7 @@ func LecturerRoutes(api fiber.Router, db *sql.DB) {
 	api.Get("/lecturers", func(c *fiber.Ctx) error {
 		return service.GetAllLecturersService(c, db)
 	})
+	api.Get("/lecturers/:id/advisees", func(c *fiber.Ctx) error {
+		return service.GetAdviseesByLecturerService(c, db)
+	})
 }
