@@ -15,5 +15,6 @@ func Routes(app *fiber.App, db *sql.DB, mongoDB *mongo.Database) {
 	StudentRoutes(api, db, mongoDB)
 	LecturerRoutes(api, db)
 	AchievementRoutes(api, db, mongoDB)
+	StatisticRoutes(api, db, mongoDB)
 }
 
