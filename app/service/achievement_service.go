@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	_ "fmt"
+	"os"
 	"pelaporan-prestasi/app/model"
 	"pelaporan-prestasi/app/repository"
 	"strconv"
@@ -16,96 +18,151 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
+//     form, err := c.MultipartForm()
+//     if err != nil {
+//         return c.Status(400).JSON(fiber.Map{
+//             "status":  "error",
+//             "message": "invalid_form_data",
+//         })
+//     }
+
+//    rawStudentID := c.Locals("student_id")
+//     studentIDStr, ok := rawStudentID.(string)
+//     if !ok || studentIDStr == "" {
+//         return c.Status(400).JSON(fiber.Map{
+//             "status":  "error",
+//             "message": "invalid_or_missing_student_id_in_token",
+//         })
+//     }
+
+//     studentUUID, err := uuid.Parse(studentIDStr)
+//     if err != nil {
+//         return c.Status(400).JSON(fiber.Map{
+//             "status":  "error",
+//             "message": "student_id_not_uuid",
+//         })
+//     }
+//     fmt.Println("STUDENT UUID TOKEN:", studentUUID)
+
+//     getValue := func(key string) string {
+//         if arr, ok := form.Value[key]; ok && len(arr) > 0 {
+//             return arr[0]
+//         }
+//         return ""
+//     }
+
+//     achievementType := getValue("achievement_type")
+//     title := getValue("title")
+//     description := getValue("description")
+//     status := getValue("status")
+//     if status == "" {
+//         status = "draft"
+//     }
+
+//     pointsStr := getValue("points")
+//     points := 0
+//     if pointsStr != "" {
+//         points, _ = strconv.Atoi(pointsStr)
+//     }
+
+//     tags := []string{}
+//     if tagsStr := getValue("tags"); tagsStr != "" {
+//         json.Unmarshal([]byte(tagsStr), &tags)
+//     }
+
+//     var details map[string]interface{}
+//     if detailsStr := getValue("details"); detailsStr != "" {
+//         json.Unmarshal([]byte(detailsStr), &details)
+//     }
+
+//     files := form.File["attachments"]
+//     var attachments []model.Attachment
+
+//     for _, file := range files {
+//         path := "uploads/" + file.Filename
+
+//         if err := c.SaveFile(file, path); err != nil {
+//             return c.Status(500).JSON(fiber.Map{
+//                 "status":  "error",
+//                 "message": "failed_save_file",
+//             })
+//         }
+
+//         attachments = append(attachments, model.Attachment{
+//             FileName:   file.Filename,
+//             FileUrl:    path,
+//             FileType:   file.Header.Get("Content-Type"),
+//             UploadedAt: time.Now(),
+//         })
+//     }
+
+//     ach := model.Achievement{
+//         StudentID:       studentIDStr,
+//         AchievementType: achievementType,
+//         Title:           title,
+//         Description:     description,
+//         Details:         details,
+//         Tags:            tags,
+//         Points:          points,
+//         Attachments:     attachments,
+//         Status:          status,
+//     }
+
+//     result, err := repository.CreateAchievement(mongoDB, &ach)
+//     if err != nil {
+//         return c.Status(500).JSON(fiber.Map{
+//             "status":  "error",
+//             "message": "failed_create_achievement_mongo",
+//         })
+//     }
+
+//     err = repository.CreateAchievementReference(db, studentUUID, result.ID.Hex())
+//     if err != nil {
+//         return c.Status(500).JSON(fiber.Map{
+//             "status":  "error",
+//             "message": err.Error(),
+//         })
+//     }
+
+//     return c.Status(201).JSON(fiber.Map{
+//         "status":  "success",
+//         "message": "achievement_created_successfully",
+//         "data": fiber.Map{
+//             "achievement": result,
+//         },
+//     })
+// }
+
 func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
-    form, err := c.MultipartForm()
-    if err != nil {
+
+    req := new(model.CreateAchievement)
+
+    if err := c.BodyParser(req); err != nil {
         return c.Status(400).JSON(fiber.Map{
             "status":  "error",
-            "message": "invalid_form_data",
+            "message": "invalid_json",
         })
     }
 
-   rawStudentID := c.Locals("student_id")
+    rawStudentID := c.Locals("student_id")
     studentIDStr, ok := rawStudentID.(string)
     if !ok || studentIDStr == "" {
         return c.Status(400).JSON(fiber.Map{
             "status":  "error",
-            "message": "invalid_or_missing_student_id_in_token",
-        })
-    }
-
-    studentUUID, err := uuid.Parse(studentIDStr)
-    if err != nil {
-        return c.Status(400).JSON(fiber.Map{
-            "status":  "error",
-            "message": "student_id_not_uuid",
-        })
-    }
-    fmt.Println("STUDENT UUID TOKEN:", studentUUID)
-
-    getValue := func(key string) string {
-        if arr, ok := form.Value[key]; ok && len(arr) > 0 {
-            return arr[0]
-        }
-        return ""
-    }
-
-    achievementType := getValue("achievement_type")
-    title := getValue("title")
-    description := getValue("description")
-    status := getValue("status")
-    if status == "" {
-        status = "draft"
-    }
-
-    pointsStr := getValue("points")
-    points := 0
-    if pointsStr != "" {
-        points, _ = strconv.Atoi(pointsStr)
-    }
-
-    tags := []string{}
-    if tagsStr := getValue("tags"); tagsStr != "" {
-        json.Unmarshal([]byte(tagsStr), &tags)
-    }
-
-    var details map[string]interface{}
-    if detailsStr := getValue("details"); detailsStr != "" {
-        json.Unmarshal([]byte(detailsStr), &details)
-    }
-
-
-    files := form.File["attachments"]
-    var attachments []model.Attachment
-
-    for _, file := range files {
-        path := "uploads/" + file.Filename
-
-        if err := c.SaveFile(file, path); err != nil {
-            return c.Status(500).JSON(fiber.Map{
-                "status":  "error",
-                "message": "failed_save_file",
-            })
-        }
-
-        attachments = append(attachments, model.Attachment{
-            FileName:   file.Filename,
-            FileUrl:    path,
-            FileType:   file.Header.Get("Content-Type"),
-            UploadedAt: time.Now(),
+            "message": "invalid_or_missing_student_id",
         })
     }
 
     ach := model.Achievement{
         StudentID:       studentIDStr,
-        AchievementType: achievementType,
-        Title:           title,
-        Description:     description,
-        Details:         details,
-        Tags:            tags,
-        Points:          points,
-        Attachments:     attachments,
-        Status:          status,
+        AchievementType: req.AchievementType,
+        Title:           req.Title,
+        Description:     req.Description,
+        Details:         req.Details,
+        Tags:            req.Tags,
+        Status:          "draft",
+        Attachments:     []model.Attachment{},
     }
 
     result, err := repository.CreateAchievement(mongoDB, &ach)
@@ -116,22 +173,84 @@ func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
         })
     }
 
-    err = repository.CreateAchievementReference(db, studentUUID, result.ID.Hex())
-    if err != nil {
-        return c.Status(500).JSON(fiber.Map{
+    studentUUID, _ := uuid.Parse(studentIDStr)
+    _ = repository.CreateAchievementReference(db, studentUUID, result.ID.Hex())
+
+    return c.Status(201).JSON(fiber.Map{
+        "status": "success",
+        "data":   result,
+    })
+}
+
+func UploadAchievementAttachmentService(c *fiber.Ctx, mongoDB *mongo.Database) error {
+    achievementID := c.Params("id")
+    if achievementID == "" {
+        return c.Status(400).JSON(fiber.Map{
             "status":  "error",
-            "message": err.Error(), 
+            "message": "missing_achievement_id",
         })
     }
 
-    return c.Status(201).JSON(fiber.Map{
-        "status":  "success",
-        "message": "achievement_created_successfully",
-        "data": fiber.Map{
-            "achievement": result,
-        },
+    form, err := c.MultipartForm()
+    if err != nil {
+        return c.Status(400).JSON(fiber.Map{
+            "status":  "error",
+            "message": "invalid_form_data",
+        })
+    }
+
+    files := form.File["attachments"]
+    if len(files) == 0 {
+        return c.Status(400).JSON(fiber.Map{
+            "status":  "error",
+            "message": "no_files_uploaded",
+        })
+    }
+
+    if err := os.MkdirAll("uploads", os.ModePerm); err != nil {
+        return c.Status(500).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed_create_uploads_folder",
+        })
+    }
+
+    var attachments []model.Attachment
+
+    for _, file := range files {
+
+        filePath := "uploads/" + file.Filename
+
+        if err := c.SaveFile(file, filePath); err != nil {
+            fmt.Println("SAVE FILE ERROR:", err)
+            return c.Status(500).JSON(fiber.Map{
+                "status":  "error",
+                "message": "failed_save_file",
+            })
+        }
+
+        attachments = append(attachments, model.Attachment{
+            FileName:   file.Filename,
+            FileUrl:    filePath,
+            FileType:   file.Header.Get("Content-Type"),
+            UploadedAt: time.Now(),
+        })
+    }
+
+    // Push ke MongoDB
+    err = repository.AddAttachmentsToAchievement(mongoDB, achievementID, attachments)
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed_update_attachments",
+        })
+    }
+
+    return c.JSON(fiber.Map{
+        "status":      "success",
+        "attachments": attachments,
     })
 }
+
 
 func GetAllAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB) error {
 	list, err := repository.GetAllAchievements(mongoDB, sqlDB)

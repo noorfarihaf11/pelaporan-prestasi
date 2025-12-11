@@ -15,6 +15,10 @@ func AchievementRoutes(api fiber.Router, db *sql.DB, mongoDB *mongo.Database) {
         return service.CreateAchievementService(c, mongoDB, db)
     })
 
+    api.Post("/achievements/:id/attachments", middleware.RBAC("achievement:create", db), func(c *fiber.Ctx) error {
+        return service.UploadAchievementAttachmentService(c, mongoDB)
+    })
+
 	api.Get("/achievements", func(c *fiber.Ctx) error {
 		return service.GetAllAchievementsService(c, mongoDB, db)
 	})

@@ -18,16 +18,16 @@ func UserRoutes(api fiber.Router, db *sql.DB) {
 	api.Get("/users/:id", middleware.RBAC("user:manage", db), func(c *fiber.Ctx) error {
 		return service.GetUserByIDService(c, db)
 	})
-	api.Post("/users", func(c *fiber.Ctx) error {
+	api.Post("/users", middleware.RBAC("user:manage", db), func(c *fiber.Ctx) error {
 		return service.CreateUserService(c, db)
 	})
-	api.Put("/users/:id", func(c *fiber.Ctx) error {
+	api.Put("/users/:id", middleware.RBAC("user:manage", db), func(c *fiber.Ctx) error {
 		return service.UpdateUserService(c, db)
 	})
-	api.Delete("/users/:id", func(c *fiber.Ctx) error {
+	api.Delete("/users/:id", middleware.RBAC("user:manage", db), func(c *fiber.Ctx) error {
 		return service.DeleteUserService(c, db)
 	})
-	api.Put("/users/:id/role", func(c *fiber.Ctx) error {
+	api.Put("/users/:id/role", middleware.RBAC("user:manage", db), func(c *fiber.Ctx) error {
 		return service.UpdateUserRoleService(c, db)
 	})
 

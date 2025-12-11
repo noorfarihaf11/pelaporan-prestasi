@@ -23,6 +23,14 @@ type Achievement struct {
     UpdatedAt       time.Time              `json:"updated_at" bson:"updated_at"`
 }
 
+type CreateAchievement struct {
+    AchievementType string                 `json:"achievement_type" bson:"achievement_type"`
+    Title           string                 `json:"title" bson:"title"`
+    Description     string                 `json:"description" bson:"description"`
+    Details         bson.M                 `json:"details" bson:"details"`
+    Tags            []string               `json:"tags" bson:"tags"`
+}
+
 type AchievementResponse struct {
     ID              primitive.ObjectID     `json:"id" bson:"_id,omitempty"`
     StudentID       string                 `json:"student_id" bson:"student_id"`

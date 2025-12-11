@@ -33,6 +33,32 @@ func CreateAchievement(db *mongo.Database, ach *model.Achievement) (*model.Achie
 	return ach, nil
 }
 
+func AddAttachmentsToAchievement(mongoDB *mongo.Database, achievementID string, attachments []model.Attachment) error {
+    collection := mongoDB.Collection("achievements")
+
+    objID, err := primitive.ObjectIDFromHex(achievementID)
+    if err != nil {
+        return err
+    }
+
+    update := bson.M{
+        "$push": bson.M{
+            "attachments": bson.M{
+                "$each": attachments,
+            },
+        },
+    }
+
+    _, err = collection.UpdateOne(
+        context.Background(),
+        bson.M{"_id": objID},
+        update,
+    )
+
+    return err
+}
+
+
 func GetAllAchievements(db *mongo.Database, sqlDB *sql.DB) ([]model.AchievementResponse, error) {
 	collection := db.Collection("achievements")
 
@@ -153,6 +179,8 @@ func UpdateAchievement(db *mongo.Database, id string, update bson.M) (*model.Ach
 
 	return &updated, nil
 }
+
+
 
 func SoftDeleteAchievement(db *mongo.Database, id string) error {
 	collection := db.Collection("achievements")
