@@ -3,7 +3,6 @@ package model
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -31,6 +30,12 @@ type CreateAchievement struct {
     Tags            []string               `json:"tags" bson:"tags"`
 }
 
+type VerifyAchievement struct {
+    Points      int       `json:"points" bson:"points"`
+    VerifiedBy  string    `json:"verified_by" bson:"verified_by"`
+    VerifiedAt  time.Time `json:"verified_at" bson:"verified_at"`
+}
+
 type AchievementResponse struct {
     ID              primitive.ObjectID     `json:"id" bson:"_id,omitempty"`
     StudentID       string                 `json:"student_id" bson:"student_id"`
@@ -43,9 +48,9 @@ type AchievementResponse struct {
     Tags            []string               `json:"tags" bson:"tags"`
     Points          int                    `json:"points" bson:"points"`
     Status          string                 `json:"status" bson:"status"`
-    VerifiedAt      *time.Time              `json:"verified_at" bson:"verified_at"`
-    VerifiedBy      *uuid.UUID            `json:"verified_by" bson:"verified_by"`
-    RejectionNote   *string                 `json:"rejection_note" bson:"rejection_note"`
+    VerifiedAt      *time.Time              `json:"verified_at"`
+    VerifiedBy      *string                 `json:"verified_by"`
+    RejectionNote   *string                 `json:"rejection_note"`
     CreatedAt       time.Time              `json:"created_at" bson:"created_at"`
     UpdatedAt       time.Time              `json:"updated_at" bson:"updated_at"`
 }

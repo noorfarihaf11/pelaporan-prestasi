@@ -34,30 +34,29 @@ func CreateAchievement(db *mongo.Database, ach *model.Achievement) (*model.Achie
 }
 
 func AddAttachmentsToAchievement(mongoDB *mongo.Database, achievementID string, attachments []model.Attachment) error {
-    collection := mongoDB.Collection("achievements")
+	collection := mongoDB.Collection("achievements")
 
-    objID, err := primitive.ObjectIDFromHex(achievementID)
-    if err != nil {
-        return err
-    }
+	objID, err := primitive.ObjectIDFromHex(achievementID)
+	if err != nil {
+		return err
+	}
 
-    update := bson.M{
-        "$push": bson.M{
-            "attachments": bson.M{
-                "$each": attachments,
-            },
-        },
-    }
+	update := bson.M{
+		"$push": bson.M{
+			"attachments": bson.M{
+				"$each": attachments,
+			},
+		},
+	}
 
-    _, err = collection.UpdateOne(
-        context.Background(),
-        bson.M{"_id": objID},
-        update,
-    )
+	_, err = collection.UpdateOne(
+		context.Background(),
+		bson.M{"_id": objID},
+		update,
+	)
 
-    return err
+	return err
 }
-
 
 func GetAllAchievements(db *mongo.Database, sqlDB *sql.DB) ([]model.AchievementResponse, error) {
 	collection := db.Collection("achievements")
@@ -95,7 +94,7 @@ func GetAllAchievements(db *mongo.Database, sqlDB *sql.DB) ([]model.AchievementR
 		}
 		if ref != nil {
 			a.VerifiedAt = ref.VerifiedAt
-			a.VerifiedBy = ref.VerifiedBy
+			a.VerifiedBy = UUIDPtrToStringPtr(ref.VerifiedBy)
 			a.RejectionNote = ref.RejectionNote
 		}
 
@@ -129,7 +128,7 @@ func GetAchievementByID(db *mongo.Database, sqlDB *sql.DB, id string) (*model.Ac
 	}
 	if ref != nil {
 		ach.VerifiedAt = ref.VerifiedAt
-		ach.VerifiedBy = ref.VerifiedBy
+		ach.VerifiedBy = UUIDPtrToStringPtr(ref.VerifiedBy)
 		ach.RejectionNote = ref.RejectionNote
 	}
 
@@ -180,7 +179,32 @@ func UpdateAchievement(db *mongo.Database, id string, update bson.M) (*model.Ach
 	return &updated, nil
 }
 
+func VerifyAchievement(mongoDB *mongo.Database, achievementID string, points int, lecturerID string) error {
+	collection := mongoDB.Collection("achievements")
 
+	objID, err := primitive.ObjectIDFromHex(achievementID)
+	if err != nil {
+		return err
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"status":      "verified",
+			"points":      points,
+			"verified_by": lecturerID,
+			"verified_at": time.Now(),
+			"updated_at":  time.Now(),
+		},
+	}
+
+	_, err = collection.UpdateOne(
+		context.Background(),
+		bson.M{"_id": objID},
+		update,
+	)
+
+	return err
+}
 
 func SoftDeleteAchievement(db *mongo.Database, id string) error {
 	collection := db.Collection("achievements")
@@ -249,7 +273,7 @@ func GetAchievementsByStudentID(db *mongo.Database, sqlDB *sql.DB, studentID str
 		}
 		if ref != nil {
 			ach.VerifiedAt = ref.VerifiedAt
-			ach.VerifiedBy = ref.VerifiedBy
+			ach.VerifiedBy = UUIDPtrToStringPtr(ref.VerifiedBy)
 			ach.RejectionNote = ref.RejectionNote
 		}
 
@@ -291,8 +315,9 @@ func GetAchievementHistory(db *sql.DB, mongoDB *mongo.Database, mongoID string) 
 	if ach.VerifiedAt != nil {
 		var updatedBy string
 		if ach.VerifiedBy != nil {
-			updatedBy = ach.VerifiedBy.String()
+			updatedBy = *ach.VerifiedBy
 		}
+
 		history = append(history, model.AchievementHistory{
 			Status:        "verified",
 			UpdatedBy:     updatedBy,
@@ -302,4 +327,12 @@ func GetAchievementHistory(db *sql.DB, mongoDB *mongo.Database, mongoID string) 
 	}
 
 	return history, nil
+}
+
+func UUIDPtrToStringPtr(u *uuid.UUID) *string {
+	if u == nil {
+		return nil
+	}
+	s := u.String()
+	return &s
 }
