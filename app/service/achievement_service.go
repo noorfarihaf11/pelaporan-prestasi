@@ -18,122 +18,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
-//     form, err := c.MultipartForm()
-//     if err != nil {
-//         return c.Status(400).JSON(fiber.Map{
-//             "status":  "error",
-//             "message": "invalid_form_data",
-//         })
-//     }
-
-//    rawStudentID := c.Locals("student_id")
-//     studentIDStr, ok := rawStudentID.(string)
-//     if !ok || studentIDStr == "" {
-//         return c.Status(400).JSON(fiber.Map{
-//             "status":  "error",
-//             "message": "invalid_or_missing_student_id_in_token",
-//         })
-//     }
-
-//     studentUUID, err := uuid.Parse(studentIDStr)
-//     if err != nil {
-//         return c.Status(400).JSON(fiber.Map{
-//             "status":  "error",
-//             "message": "student_id_not_uuid",
-//         })
-//     }
-//     fmt.Println("STUDENT UUID TOKEN:", studentUUID)
-
-//     getValue := func(key string) string {
-//         if arr, ok := form.Value[key]; ok && len(arr) > 0 {
-//             return arr[0]
-//         }
-//         return ""
-//     }
-
-//     achievementType := getValue("achievement_type")
-//     title := getValue("title")
-//     description := getValue("description")
-//     status := getValue("status")
-//     if status == "" {
-//         status = "draft"
-//     }
-
-//     pointsStr := getValue("points")
-//     points := 0
-//     if pointsStr != "" {
-//         points, _ = strconv.Atoi(pointsStr)
-//     }
-
-//     tags := []string{}
-//     if tagsStr := getValue("tags"); tagsStr != "" {
-//         json.Unmarshal([]byte(tagsStr), &tags)
-//     }
-
-//     var details map[string]interface{}
-//     if detailsStr := getValue("details"); detailsStr != "" {
-//         json.Unmarshal([]byte(detailsStr), &details)
-//     }
-
-//     files := form.File["attachments"]
-//     var attachments []model.Attachment
-
-//     for _, file := range files {
-//         path := "uploads/" + file.Filename
-
-//         if err := c.SaveFile(file, path); err != nil {
-//             return c.Status(500).JSON(fiber.Map{
-//                 "status":  "error",
-//                 "message": "failed_save_file",
-//             })
-//         }
-
-//         attachments = append(attachments, model.Attachment{
-//             FileName:   file.Filename,
-//             FileUrl:    path,
-//             FileType:   file.Header.Get("Content-Type"),
-//             UploadedAt: time.Now(),
-//         })
-//     }
-
-//     ach := model.Achievement{
-//         StudentID:       studentIDStr,
-//         AchievementType: achievementType,
-//         Title:           title,
-//         Description:     description,
-//         Details:         details,
-//         Tags:            tags,
-//         Points:          points,
-//         Attachments:     attachments,
-//         Status:          status,
-//     }
-
-//     result, err := repository.CreateAchievement(mongoDB, &ach)
-//     if err != nil {
-//         return c.Status(500).JSON(fiber.Map{
-//             "status":  "error",
-//             "message": "failed_create_achievement_mongo",
-//         })
-//     }
-
-//     err = repository.CreateAchievementReference(db, studentUUID, result.ID.Hex())
-//     if err != nil {
-//         return c.Status(500).JSON(fiber.Map{
-//             "status":  "error",
-//             "message": err.Error(),
-//         })
-//     }
-
-//     return c.Status(201).JSON(fiber.Map{
-//         "status":  "success",
-//         "message": "achievement_created_successfully",
-//         "data": fiber.Map{
-//             "achievement": result,
-//         },
-//     })
-// }
-
 func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 
 	req := new(model.CreateAchievement)
@@ -375,7 +259,6 @@ func UpdateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 func SoftDeleteAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id")
 
-	// Soft delete Mongo
 	err := repository.SoftDeleteAchievement(mongoDB, id)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
@@ -384,7 +267,6 @@ func SoftDeleteAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql
 		})
 	}
 
-	// Update PostgreSQL reference
 	err = repository.UpdateAchievementReference(db, id, "deleted")
 	if err != nil {
 		msg := err.Error()
@@ -410,46 +292,57 @@ func SoftDeleteAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql
 }
 
 func SubmitAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
-	id := c.Params("id")
+    id := c.Params("id")
 
-	err := repository.UpdateAchievementStatus(mongoDB, id, "submitted")
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"status":  "error",
-			"message": err.Error(),
-		})
-	}
+    err := repository.UpdateAchievementStatus(mongoDB, id, "submitted")
+    if err != nil {
+        return c.Status(400).JSON(fiber.Map{
+            "status":  "error",
+            "message": err.Error(),
+        })
+    }
 
-	err = repository.UpdateAchievementReference(db, id, "submitted")
-	if err != nil {
-		msg := err.Error()
+    err = repository.UpdateAchievementReference(db, id, "submitted")
+    if err != nil {
+        msg := err.Error()
 
-		if msg == "reference_not_found" {
-			return c.Status(404).JSON(fiber.Map{
-				"status":  "error",
-				"message": "achievement_reference_not_found",
-			})
-		}
+        if msg == "reference_not_found" {
+            return c.Status(404).JSON(fiber.Map{
+                "status":  "error",
+                "message": "achievement_reference_not_found",
+            })
+        }
 
-		return c.Status(500).JSON(fiber.Map{
-			"status":  "error",
-			"message": "failed submit",
-			"detail":  msg,
-		})
-	}
+        return c.Status(500).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed submit",
+            "detail":  msg,
+        })
+    }
 
-	return c.Status(200).JSON(fiber.Map{
-		"status":  "success",
-		"message": "achievement submitted successfully",
-	})
+    updated, err := repository.GetAchievementByID(mongoDB, db, id)
+    if err != nil {
+        return c.Status(500).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed_get_updated_achievement",
+        })
+    }
+
+    return c.Status(200).JSON(fiber.Map{
+        "status":  "success",
+        "message": "achievement submitted successfully",
+        "data": fiber.Map{
+            "achievement": updated,
+        },
+    })
 }
+
 
 func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id")
 
-	// 1. Ambil data prestasi (gabungan mongo + postgres)
 	achievement, err := repository.GetAchievementByID(mongoDB, db, id)
-	if err != nil {
+	if err != nil || achievement == nil {
 		return c.Status(404).JSON(fiber.Map{
 			"status":  "error",
 			"message": "achievement_not_found",
@@ -464,11 +357,7 @@ func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 		})
 	}
 
-	// 2. Parse request points
-	var payload struct {
-		Points int `json:"points"`
-	}
-
+	var payload model.VerifyAchievement
 	if err := c.BodyParser(&payload); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"status":  "error",
@@ -476,11 +365,9 @@ func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 		})
 	}
 
-	// 3. Ambil ID dosen dari token
 	rawUserID := c.Locals("user_id")
 	lecturerID, _ := rawUserID.(string)
 
-	// 4. Update MongoDB (status + points + verified_by + verified_at)
 	err = repository.VerifyAchievement(mongoDB, id, payload.Points, lecturerID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
@@ -490,7 +377,6 @@ func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 		})
 	}
 
-	// 5. Update PostgreSQL reference
 	err = repository.UpdateAchievementReference(db, id, "verified")
 	if err != nil {
 		if err.Error() == "reference_not_found" {
@@ -506,11 +392,24 @@ func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 		})
 	}
 
+	updated, err := repository.GetAchievementByID(mongoDB, db, id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "failed_get_updated_achievement",
+		})
+	}
+
 	return c.Status(200).JSON(fiber.Map{
 		"status":  "success",
 		"message": "achievement verified successfully",
+		"data": fiber.Map{
+			"achievement":    updated,
+			"updated_status": updated.Status, // biasanya "verified"
+		},
 	})
 }
+
 
 func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id")
@@ -567,9 +466,21 @@ func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 		})
 	}
 
+	rejected, err := repository.GetAchievementByID(mongoDB, db, id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "failed_get_rejected_achievement",
+		})
+	}
+
 	return c.Status(200).JSON(fiber.Map{
 		"status":  "success",
 		"message": "achievement rejected successfully",
+		"data": fiber.Map{
+			"achievement":    rejected,
+			"rejected_status": rejected.Status,
+		},
 	})
 }
 
