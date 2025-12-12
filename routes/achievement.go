@@ -19,19 +19,19 @@ func AchievementRoutes(api fiber.Router, db *sql.DB, mongoDB *mongo.Database) {
         return service.UploadAchievementAttachmentService(c, mongoDB)
     })
 
-	api.Get("/achievements", func(c *fiber.Ctx) error {
+	api.Get("/achievements", middleware.RBAC("achievement:read", db),func(c *fiber.Ctx) error {
 		return service.GetAllAchievementsService(c, mongoDB, db)
 	})
 
-	api.Get("/achievements/:id", func(c *fiber.Ctx) error {
+	api.Get("/achievements/:id", middleware.RBAC("achievement:read", db),func(c *fiber.Ctx) error {
 		return service.GetAchievementByIDService(c, mongoDB, db)
 	})
 
-	api.Put("/achievements/:id", func(c *fiber.Ctx) error {
+	api.Put("/achievements/:id", middleware.RBAC("achievement:update", db), func(c *fiber.Ctx) error {
         return service.UpdateAchievementService(c, mongoDB, db)
     })
 
-	api.Delete("/achievements/delete/:id", func(c *fiber.Ctx) error {
+	api.Delete("/achievements/delete/:id", middleware.RBAC("achievement:delete", db), func(c *fiber.Ctx) error {
         return service.SoftDeleteAchievementService(c, mongoDB, db)
     })
 
@@ -47,11 +47,7 @@ func AchievementRoutes(api fiber.Router, db *sql.DB, mongoDB *mongo.Database) {
         return service.RejectAchievementService(c, mongoDB, db)
     })
 
-	api.Get("/reports/statistics", func(c *fiber.Ctx) error {
-		return service.GetStatisticsService(c, mongoDB)
-	})
-
-	api.Get("/achievements/:id/history", func(c *fiber.Ctx) error {
+	api.Get("/achievements/:id/history", middleware.RBAC("achievement:history", db), func(c *fiber.Ctx) error {
 		return service.GetAchievementHistoryService(c, mongoDB, db)
 	})
 

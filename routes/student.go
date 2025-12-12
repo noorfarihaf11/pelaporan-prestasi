@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"pelaporan-prestasi/app/service"
+	"pelaporan-prestasi/middleware"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -11,16 +12,16 @@ import (
 
 func StudentRoutes(api fiber.Router, db *sql.DB,  mongoDB *mongo.Database) {
 
-	api.Get("/students", func(c *fiber.Ctx) error {
+	api.Get("/students", middleware.RBAC("student:read", db), func(c *fiber.Ctx) error {
 		return service.GetAllStudentService(c, db)
 	})
-	api.Get("/students/:id", func(c *fiber.Ctx) error {
+	api.Get("/students/:id", middleware.RBAC("student:read", db), func(c *fiber.Ctx) error {
 		return service.GetStudentByIDService(c, db)
 	})
-	api.Get("/students/:id/achievements", func(c *fiber.Ctx) error {
+	api.Get("/students/:id/achievements", middleware.RBAC("student:achievement", db), func(c *fiber.Ctx) error {
 		return service.GetAchievementsByStudentIDService(c, mongoDB, db)
 	})
-	api.Put("/students/:id/advisor", func(c *fiber.Ctx) error {
+	api.Put("/students/:id/advisor", middleware.RBAC("student:advisor", db), func(c *fiber.Ctx) error {
 		return service.UpdateStudentAdvisorService(c, db)
 	})
 
