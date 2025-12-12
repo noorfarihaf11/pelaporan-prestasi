@@ -153,6 +153,106 @@ func GetAllAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql
 		},
 	})
 }
+func GetAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB) error {
+    rawUserID := c.Locals("user_id")
+    rawRoleID := c.Locals("role_id")
+
+    userID, ok1 := rawUserID.(string)
+    roleID, ok2 := rawRoleID.(string)
+
+    fmt.Println("DEBUG userID from JWT:", userID)
+    fmt.Println("DEBUG roleID from JWT:", roleID)
+
+    if !ok1 || !ok2 || userID == "" || roleID == "" {
+        fmt.Println("DEBUG: locals missing!")
+        return c.Status(401).JSON(fiber.Map{
+            "status":  "error",
+            "message": "invalid_token_or_role_id_missing",
+        })
+    }
+
+    roleName, err := repository.GetRoleNameByID(sqlDB, roleID)
+    fmt.Println("DEBUG: resolved roleName =", roleName, "err:", err)
+
+    if err != nil {
+        return c.Status(403).JSON(fiber.Map{
+            "status":  "error",
+            "message": "cannot_determine_role_name",
+            "detail":  err.Error(),
+        })
+    }
+
+    var achievements []model.AchievementResponse
+
+    switch roleName {
+
+    case "Admin":
+        achievements, err = repository.GetAllAchievements(mongoDB, sqlDB)
+
+    case "Mahasiswa":
+        studentID, err2 := repository.GetStudentIDByUserID(sqlDB, userID)
+
+        fmt.Println("DEBUG: studentID =", studentID, "err:", err2)
+
+        if err2 != nil || studentID == "" {
+            return c.Status(404).JSON(fiber.Map{
+                "status":  "error",
+                "message": "student_not_found",
+            })
+        }
+
+        achievements, err = repository.GetAchievementsForStudent(
+            mongoDB,
+            sqlDB,
+            studentID,
+        )
+
+    case "Dosen Wali":
+
+        lecturerID, err := repository.GetLecturerIDByUserID(sqlDB, userID)
+
+        fmt.Println("DEBUG: lecturerID =", lecturerID, "err:", err)
+
+        if err != nil || lecturerID == "" {
+            fmt.Println("DEBUG: lecturer_not_found for user:", userID)
+            return c.Status(404).JSON(fiber.Map{
+                "status":  "error",
+                "message": "lecturer_not_found",
+            })
+        }
+
+        achievements, err = repository.GetAchievementsForLecturer(
+            sqlDB,
+            mongoDB,
+            lecturerID,
+        )
+
+    default:
+        fmt.Println("DEBUG: UNKNOWN ROLE", roleName)
+        return c.Status(403).JSON(fiber.Map{
+            "status":  "error",
+            "message": "forbidden_invalid_role",
+        })
+    }
+
+    if err != nil {
+        fmt.Println("DEBUG error fetching achievements:", err)
+        return c.Status(500).JSON(fiber.Map{
+            "status":  "error",
+            "message": "failed_fetch_achievements",
+            "detail":  err.Error(),
+        })
+    }
+
+    return c.JSON(fiber.Map{
+        "status":  "success",
+        "message": "success_get_achievements",
+        "data": fiber.Map{
+            "achievements": achievements,
+        },
+    })
+}
+
 
 func GetAchievementByIDService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB) error {
 	id := c.Params("id")
@@ -292,51 +392,50 @@ func SoftDeleteAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql
 }
 
 func SubmitAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
-    id := c.Params("id")
+	id := c.Params("id")
 
-    err := repository.UpdateAchievementStatus(mongoDB, id, "submitted")
-    if err != nil {
-        return c.Status(400).JSON(fiber.Map{
-            "status":  "error",
-            "message": err.Error(),
-        })
-    }
+	err := repository.UpdateAchievementStatus(mongoDB, id, "submitted")
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
 
-    err = repository.UpdateAchievementReference(db, id, "submitted")
-    if err != nil {
-        msg := err.Error()
+	err = repository.UpdateAchievementReference(db, id, "submitted")
+	if err != nil {
+		msg := err.Error()
 
-        if msg == "reference_not_found" {
-            return c.Status(404).JSON(fiber.Map{
-                "status":  "error",
-                "message": "achievement_reference_not_found",
-            })
-        }
+		if msg == "reference_not_found" {
+			return c.Status(404).JSON(fiber.Map{
+				"status":  "error",
+				"message": "achievement_reference_not_found",
+			})
+		}
 
-        return c.Status(500).JSON(fiber.Map{
-            "status":  "error",
-            "message": "failed submit",
-            "detail":  msg,
-        })
-    }
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "failed submit",
+			"detail":  msg,
+		})
+	}
 
-    updated, err := repository.GetAchievementByID(mongoDB, db, id)
-    if err != nil {
-        return c.Status(500).JSON(fiber.Map{
-            "status":  "error",
-            "message": "failed_get_updated_achievement",
-        })
-    }
+	updated, err := repository.GetAchievementByID(mongoDB, db, id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "failed_get_updated_achievement",
+		})
+	}
 
-    return c.Status(200).JSON(fiber.Map{
-        "status":  "success",
-        "message": "achievement submitted successfully",
-        "data": fiber.Map{
-            "achievement": updated,
-        },
-    })
+	return c.Status(200).JSON(fiber.Map{
+		"status":  "success",
+		"message": "achievement submitted successfully",
+		"data": fiber.Map{
+			"achievement": updated,
+		},
+	})
 }
-
 
 func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id")
@@ -410,7 +509,6 @@ func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	})
 }
 
-
 func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id")
 
@@ -478,7 +576,7 @@ func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 		"status":  "success",
 		"message": "achievement rejected successfully",
 		"data": fiber.Map{
-			"achievement":    rejected,
+			"achievement":     rejected,
 			"rejected_status": rejected.Status,
 		},
 	})

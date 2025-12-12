@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -328,6 +329,122 @@ func GetAchievementHistory(db *sql.DB, mongoDB *mongo.Database, mongoID string) 
 
 	return history, nil
 }
+func GetAchievementsForStudent(
+    mongoDB *mongo.Database,
+    sqlDB *sql.DB,
+    studentID string,
+) ([]model.AchievementResponse, error) {
+
+    collection := mongoDB.Collection("achievements")
+
+    cursor, err := collection.Find(context.Background(), bson.M{"student_id": studentID})
+    if err != nil {
+        return nil, err
+    }
+    defer cursor.Close(context.Background())
+
+    var achievements []model.AchievementResponse
+
+    for cursor.Next(context.Background()) {
+        var ach model.AchievementResponse
+        if err := cursor.Decode(&ach); err != nil {
+            return nil, err
+        }
+
+        // merge reference from Postgres
+        ref, err := GetAchievementReferenceByMongoID(sqlDB, ach.ID.Hex())
+        if err != nil {
+            return nil, err
+        }
+        if ref != nil {
+            ach.VerifiedAt = ref.VerifiedAt
+            ach.VerifiedBy = UUIDPtrToStringPtr(ref.VerifiedBy)
+            ach.RejectionNote = ref.RejectionNote
+        }
+
+        // advisor_id
+        studentUUID, err := uuid.Parse(studentID)
+        if err == nil {
+            sqlDB.QueryRow("SELECT advisor_id FROM students WHERE id=$1", studentUUID).Scan(&ach.AdvisorID)
+        }
+
+        achievements = append(achievements, ach)
+    }
+
+    return achievements, nil
+}
+func GetAchievementsForLecturer(
+    sqlDB *sql.DB,
+    mongoDB *mongo.Database,
+    lecturerID string,
+) ([]model.AchievementResponse, error) {
+
+    // 1. Ambil semua student advisees
+    studentIDs, err := GetStudentsByAdvisor(sqlDB, lecturerID)
+    if err != nil {
+        return nil, err
+    }
+
+    if len(studentIDs) == 0 {
+        return []model.AchievementResponse{}, nil
+    }
+
+    // 2. Ambil references untuk semua student ini
+    query := `
+        SELECT student_id, mongo_achievement_id, verified_at, verified_by, rejection_note
+        FROM achievement_references
+        WHERE student_id = ANY($1)
+        ORDER BY created_at DESC
+    `
+    rows, err := sqlDB.Query(query, pq.Array(studentIDs))
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    mongoColl := mongoDB.Collection("achievements")
+    var list []model.AchievementResponse
+
+    for rows.Next() {
+        var ref model.AchievementReference
+        err := rows.Scan(
+            &ref.StudentID,
+            &ref.MongoAchievementID,
+            &ref.VerifiedAt,
+            &ref.VerifiedBy,
+            &ref.RejectionNote,
+        )
+        if err != nil {
+            return nil, err
+        }
+
+        // Fetch detail MongoDB
+        oid, err := primitive.ObjectIDFromHex(ref.MongoAchievementID)
+        if err != nil {
+            continue
+        }
+
+        var ach model.AchievementResponse
+        err = mongoColl.FindOne(
+            context.Background(),
+            bson.M{"_id": oid},
+        ).Decode(&ach)
+        if err != nil {
+            continue
+        }
+
+        // merge postgres → response
+        ach.StudentID = ref.StudentID.String()
+		ach.VerifiedAt = ref.VerifiedAt
+		ach.VerifiedBy = UUIDPtrToStringPtr(ref.VerifiedBy)
+		ach.RejectionNote = ref.RejectionNote
+		ach.AdvisorID = lecturerID
+
+        list = append(list, ach)
+    }
+
+    return list, nil
+}
 
 func UUIDPtrToStringPtr(u *uuid.UUID) *string {
 	if u == nil {
@@ -335,4 +452,20 @@ func UUIDPtrToStringPtr(u *uuid.UUID) *string {
 	}
 	s := u.String()
 	return &s
+}
+func GetRoleNameByID(db *sql.DB, roleID string) (string, error) {
+    var roleName string
+
+    // Convert string → UUID
+    uuidVal, err := uuid.Parse(roleID)
+    if err != nil {
+        return "", fmt.Errorf("invalid_role_uuid")
+    }
+
+    err = db.QueryRow("SELECT name FROM roles WHERE id = $1", uuidVal).Scan(&roleName)
+    if err != nil {
+        return "", err
+    }
+
+    return roleName, nil
 }

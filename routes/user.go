@@ -14,7 +14,6 @@ func UserRoutes(api fiber.Router, db *sql.DB) {
 	api.Get("/users", middleware.RBAC("user:manage", db), func(c *fiber.Ctx) error {
 		return service.GetAllUserService(c, db)
 	})
-
 	api.Get("/users/:id", middleware.RBAC("user:manage", db), func(c *fiber.Ctx) error {
 		return service.GetUserByIDService(c, db)
 	})

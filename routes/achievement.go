@@ -20,7 +20,7 @@ func AchievementRoutes(api fiber.Router, db *sql.DB, mongoDB *mongo.Database) {
     })
 
 	api.Get("/achievements", middleware.RBAC("achievement:read", db),func(c *fiber.Ctx) error {
-		return service.GetAllAchievementsService(c, mongoDB, db)
+		return service.GetAchievementsService(c, mongoDB, db)
 	})
 
 	api.Get("/achievements/:id", middleware.RBAC("achievement:read", db),func(c *fiber.Ctx) error {
