@@ -153,6 +153,7 @@ func GetAllAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql
 		},
 	})
 }
+
 func GetAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB) error {
     rawUserID := c.Locals("user_id")
     rawRoleID := c.Locals("role_id")
@@ -160,11 +161,7 @@ func GetAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB
     userID, ok1 := rawUserID.(string)
     roleID, ok2 := rawRoleID.(string)
 
-    fmt.Println("DEBUG userID from JWT:", userID)
-    fmt.Println("DEBUG roleID from JWT:", roleID)
-
     if !ok1 || !ok2 || userID == "" || roleID == "" {
-        fmt.Println("DEBUG: locals missing!")
         return c.Status(401).JSON(fiber.Map{
             "status":  "error",
             "message": "invalid_token_or_role_id_missing",
@@ -172,29 +169,55 @@ func GetAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB
     }
 
     roleName, err := repository.GetRoleNameByID(sqlDB, roleID)
-    fmt.Println("DEBUG: resolved roleName =", roleName, "err:", err)
-
     if err != nil {
         return c.Status(403).JSON(fiber.Map{
             "status":  "error",
             "message": "cannot_determine_role_name",
-            "detail":  err.Error(),
         })
     }
 
-    var achievements []model.AchievementResponse
+    var (
+        achievements []model.AchievementResponse
+        total        int
+    )
 
     switch roleName {
 
     case "Admin":
-        achievements, err = repository.GetAllAchievements(mongoDB, sqlDB)
+        limit, _ := strconv.Atoi(c.Query("limit", "10"))
+        page, _ := strconv.Atoi(c.Query("page", "1"))
+        offset := (page - 1) * limit
+
+        sort := c.Query("sort", "created_at")
+        order := strings.ToUpper(c.Query("order", "DESC"))
+        status := c.Query("status", "")
+        studentName := c.Query("student_name", "")
+
+        achievements, total, err = repository.GetAdminAchievementsPaginated(
+            sqlDB, mongoDB, limit, offset, sort, order, status, studentName,
+        )
+        if err != nil {
+            return c.Status(500).JSON(fiber.Map{
+                "status": "error",
+                "message": "failed_fetch_achievements",
+                "detail": err.Error(),
+            })
+        }
+
+        return c.JSON(fiber.Map{
+            "status":  "success",
+            "message": "success_get_achievements",
+            "data": fiber.Map{
+                "total":        total,
+                "page":         page,
+                "limit":        limit,
+                "achievements": achievements,
+            },
+        })
 
     case "Mahasiswa":
-        studentID, err2 := repository.GetStudentIDByUserID(sqlDB, userID)
-
-        fmt.Println("DEBUG: studentID =", studentID, "err:", err2)
-
-        if err2 != nil || studentID == "" {
+        studentID, err := repository.GetStudentIDByUserID(sqlDB, userID)
+        if err != nil || studentID == "" {
             return c.Status(404).JSON(fiber.Map{
                 "status":  "error",
                 "message": "student_not_found",
@@ -202,56 +225,67 @@ func GetAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB
         }
 
         achievements, err = repository.GetAchievementsForStudent(
-            mongoDB,
-            sqlDB,
-            studentID,
+            mongoDB, sqlDB, studentID,
         )
+        if err != nil {
+            return c.Status(500).JSON(fiber.Map{
+                "status": "error",
+                "message": "failed_fetch_achievements",
+                "detail": err.Error(),
+            })
+        }
+
+        return c.JSON(fiber.Map{
+            "status":  "success",
+            "message": "success_get_achievements",
+            "data": fiber.Map{
+                "achievements": achievements,
+            },
+        })
 
     case "Dosen Wali":
-
         lecturerID, err := repository.GetLecturerIDByUserID(sqlDB, userID)
-
-        fmt.Println("DEBUG: lecturerID =", lecturerID, "err:", err)
-
         if err != nil || lecturerID == "" {
-            fmt.Println("DEBUG: lecturer_not_found for user:", userID)
             return c.Status(404).JSON(fiber.Map{
                 "status":  "error",
                 "message": "lecturer_not_found",
             })
         }
 
-        achievements, err = repository.GetAchievementsForLecturer(
-            sqlDB,
-            mongoDB,
-            lecturerID,
+        limit, _ := strconv.Atoi(c.Query("limit", "10"))
+        page, _ := strconv.Atoi(c.Query("page", "1"))
+        offset := (page - 1) * limit
+
+        achievements, total, err = repository.GetLecturerAchievementsPaginated(
+            sqlDB, mongoDB, lecturerID, limit, offset,
         )
+        if err != nil {
+            return c.Status(500).JSON(fiber.Map{
+                "status": "error",
+                "message": "failed_fetch_achievements",
+                "detail": err.Error(),
+            })
+        }
+
+        return c.JSON(fiber.Map{
+            "status":  "success",
+            "message": "success_get_achievements",
+            "data": fiber.Map{
+                "total":        total,
+                "page":         page,
+                "limit":        limit,
+                "achievements": achievements,
+            },
+        })
 
     default:
-        fmt.Println("DEBUG: UNKNOWN ROLE", roleName)
         return c.Status(403).JSON(fiber.Map{
             "status":  "error",
             "message": "forbidden_invalid_role",
         })
     }
-
-    if err != nil {
-        fmt.Println("DEBUG error fetching achievements:", err)
-        return c.Status(500).JSON(fiber.Map{
-            "status":  "error",
-            "message": "failed_fetch_achievements",
-            "detail":  err.Error(),
-        })
-    }
-
-    return c.JSON(fiber.Map{
-        "status":  "success",
-        "message": "success_get_achievements",
-        "data": fiber.Map{
-            "achievements": achievements,
-        },
-    })
 }
+
 
 
 func GetAchievementByIDService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB) error {

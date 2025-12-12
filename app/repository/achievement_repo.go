@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"pelaporan-prestasi/app/model"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -330,120 +331,115 @@ func GetAchievementHistory(db *sql.DB, mongoDB *mongo.Database, mongoID string) 
 	return history, nil
 }
 func GetAchievementsForStudent(
-    mongoDB *mongo.Database,
-    sqlDB *sql.DB,
-    studentID string,
+	mongoDB *mongo.Database,
+	sqlDB *sql.DB,
+	studentID string,
 ) ([]model.AchievementResponse, error) {
 
-    collection := mongoDB.Collection("achievements")
+	collection := mongoDB.Collection("achievements")
 
-    cursor, err := collection.Find(context.Background(), bson.M{"student_id": studentID})
-    if err != nil {
-        return nil, err
-    }
-    defer cursor.Close(context.Background())
+	cursor, err := collection.Find(context.Background(), bson.M{"student_id": studentID})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
 
-    var achievements []model.AchievementResponse
+	var achievements []model.AchievementResponse
 
-    for cursor.Next(context.Background()) {
-        var ach model.AchievementResponse
-        if err := cursor.Decode(&ach); err != nil {
-            return nil, err
-        }
+	for cursor.Next(context.Background()) {
+		var ach model.AchievementResponse
+		if err := cursor.Decode(&ach); err != nil {
+			return nil, err
+		}
 
-        // merge reference from Postgres
-        ref, err := GetAchievementReferenceByMongoID(sqlDB, ach.ID.Hex())
-        if err != nil {
-            return nil, err
-        }
-        if ref != nil {
-            ach.VerifiedAt = ref.VerifiedAt
-            ach.VerifiedBy = UUIDPtrToStringPtr(ref.VerifiedBy)
-            ach.RejectionNote = ref.RejectionNote
-        }
+		// merge reference from Postgres
+		ref, err := GetAchievementReferenceByMongoID(sqlDB, ach.ID.Hex())
+		if err != nil {
+			return nil, err
+		}
+		if ref != nil {
+			ach.VerifiedAt = ref.VerifiedAt
+			ach.VerifiedBy = UUIDPtrToStringPtr(ref.VerifiedBy)
+			ach.RejectionNote = ref.RejectionNote
+		}
 
-        // advisor_id
-        studentUUID, err := uuid.Parse(studentID)
-        if err == nil {
-            sqlDB.QueryRow("SELECT advisor_id FROM students WHERE id=$1", studentUUID).Scan(&ach.AdvisorID)
-        }
+		// advisor_id
+		studentUUID, err := uuid.Parse(studentID)
+		if err == nil {
+			sqlDB.QueryRow("SELECT advisor_id FROM students WHERE id=$1", studentUUID).Scan(&ach.AdvisorID)
+		}
 
-        achievements = append(achievements, ach)
-    }
+		achievements = append(achievements, ach)
+	}
 
-    return achievements, nil
+	return achievements, nil
 }
-func GetAchievementsForLecturer(
-    sqlDB *sql.DB,
-    mongoDB *mongo.Database,
-    lecturerID string,
-) ([]model.AchievementResponse, error) {
+func GetLecturerAchievementsPaginated(
+	sqlDB *sql.DB,
+	mongoDB *mongo.Database,
+	lecturerID string,
+	limit int,
+	offset int,
+) ([]model.AchievementResponse, int, error) {
 
-    // 1. Ambil semua student advisees
-    studentIDs, err := GetStudentsByAdvisor(sqlDB, lecturerID)
-    if err != nil {
-        return nil, err
-    }
+	// Ambil student ID
+	studentIDs, err := GetStudentsByAdvisor(sqlDB, lecturerID)
+	if err != nil {
+		return nil, 0, err
+	}
+	if len(studentIDs) == 0 {
+		return []model.AchievementResponse{}, 0, nil
+	}
 
-    if len(studentIDs) == 0 {
-        return []model.AchievementResponse{}, nil
-    }
-
-    // 2. Ambil references untuk semua student ini
-    query := `
+	// Query paginated achievement references
+	query := `
         SELECT student_id, mongo_achievement_id, verified_at, verified_by, rejection_note
         FROM achievement_references
         WHERE student_id = ANY($1)
         ORDER BY created_at DESC
+        LIMIT $2 OFFSET $3
     `
-    rows, err := sqlDB.Query(query, pq.Array(studentIDs))
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+	rows, err := sqlDB.Query(query, pq.Array(studentIDs), limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
 
-    mongoColl := mongoDB.Collection("achievements")
-    var list []model.AchievementResponse
+	mongoColl := mongoDB.Collection("achievements")
+	list := []model.AchievementResponse{}
 
-    for rows.Next() {
-        var ref model.AchievementReference
-        err := rows.Scan(
-            &ref.StudentID,
-            &ref.MongoAchievementID,
-            &ref.VerifiedAt,
-            &ref.VerifiedBy,
-            &ref.RejectionNote,
-        )
-        if err != nil {
-            return nil, err
-        }
+	for rows.Next() {
+		var ref model.AchievementReference
+		if err := rows.Scan(&ref.StudentID, &ref.MongoAchievementID, &ref.VerifiedAt, &ref.VerifiedBy, &ref.RejectionNote); err != nil {
+			return nil, 0, err
+		}
 
-        // Fetch detail MongoDB
-        oid, err := primitive.ObjectIDFromHex(ref.MongoAchievementID)
-        if err != nil {
-            continue
-        }
+		oid, _ := primitive.ObjectIDFromHex(ref.MongoAchievementID)
+		var ach model.AchievementResponse
+		mongoColl.FindOne(context.Background(), bson.M{"_id": oid}).Decode(&ach)
 
-        var ach model.AchievementResponse
-        err = mongoColl.FindOne(
-            context.Background(),
-            bson.M{"_id": oid},
-        ).Decode(&ach)
-        if err != nil {
-            continue
-        }
-
-        // merge postgres → response
-        ach.StudentID = ref.StudentID.String()
+		ach.StudentID = ref.StudentID.String()
 		ach.VerifiedAt = ref.VerifiedAt
 		ach.VerifiedBy = UUIDPtrToStringPtr(ref.VerifiedBy)
 		ach.RejectionNote = ref.RejectionNote
 		ach.AdvisorID = lecturerID
 
-        list = append(list, ach)
-    }
+		list = append(list, ach)
+	}
 
-    return list, nil
+	// Count total entries
+	countQuery := `
+        SELECT COUNT(*)
+        FROM achievement_references
+        WHERE student_id = ANY($1)
+    `
+	var total int
+	err = sqlDB.QueryRow(countQuery, pq.Array(studentIDs)).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return list, total, nil
 }
 
 func UUIDPtrToStringPtr(u *uuid.UUID) *string {
@@ -454,18 +450,89 @@ func UUIDPtrToStringPtr(u *uuid.UUID) *string {
 	return &s
 }
 func GetRoleNameByID(db *sql.DB, roleID string) (string, error) {
-    var roleName string
+	var roleName string
 
-    // Convert string → UUID
-    uuidVal, err := uuid.Parse(roleID)
-    if err != nil {
-        return "", fmt.Errorf("invalid_role_uuid")
-    }
+	// Convert string → UUID
+	uuidVal, err := uuid.Parse(roleID)
+	if err != nil {
+		return "", fmt.Errorf("invalid_role_uuid")
+	}
 
-    err = db.QueryRow("SELECT name FROM roles WHERE id = $1", uuidVal).Scan(&roleName)
-    if err != nil {
-        return "", err
-    }
+	err = db.QueryRow("SELECT name FROM roles WHERE id = $1", uuidVal).Scan(&roleName)
+	if err != nil {
+		return "", err
+	}
 
-    return roleName, nil
+	return roleName, nil
+}
+func GetAdminAchievementsPaginated(
+	sqlDB *sql.DB,
+	mongoDB *mongo.Database,
+	limit int,
+	offset int,
+	sort string,
+	order string,
+	status string,
+	studentName string,
+) ([]model.AchievementResponse, int, error) {
+
+	filters := []string{"1 = 1"}
+	args := []interface{}{}
+	argIndex := 1
+
+	if status != "" {
+		filters = append(filters, fmt.Sprintf("status = $%d", argIndex))
+		args = append(args, status)
+		argIndex++
+	}
+
+	if studentName != "" {
+		filters = append(filters, fmt.Sprintf("student_name ILIKE $%d", argIndex))
+		args = append(args, "%"+studentName+"%")
+		argIndex++
+	}
+
+	filterQuery := strings.Join(filters, " AND ")
+
+	query := fmt.Sprintf(`
+        SELECT student_id, mongo_achievement_id, verified_at, verified_by, rejection_note
+        FROM achievement_references
+        WHERE %s
+        ORDER BY %s %s
+        LIMIT $%d OFFSET $%d
+    `, filterQuery, sort, order, argIndex, argIndex+1)
+
+	args = append(args, limit, offset)
+
+	rows, err := sqlDB.Query(query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	mongoColl := mongoDB.Collection("achievements")
+	list := []model.AchievementResponse{}
+
+	for rows.Next() {
+		var ref model.AchievementReference
+		rows.Scan(&ref.StudentID, &ref.MongoAchievementID, &ref.VerifiedAt, &ref.VerifiedBy, &ref.RejectionNote)
+
+		oid, _ := primitive.ObjectIDFromHex(ref.MongoAchievementID)
+		var ach model.AchievementResponse
+		mongoColl.FindOne(context.Background(), bson.M{"_id": oid}).Decode(&ach)
+
+		ach.StudentID = ref.StudentID.String()
+		ach.VerifiedAt = ref.VerifiedAt
+		ach.VerifiedBy = UUIDPtrToStringPtr(ref.VerifiedBy)
+		ach.RejectionNote = ref.RejectionNote
+
+		list = append(list, ach)
+	}
+
+	// total count
+	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM achievement_references WHERE %s`, filterQuery)
+	var total int
+	sqlDB.QueryRow(countQuery, args[:len(args)-2]...).Scan(&total)
+
+	return list, total, nil
 }
