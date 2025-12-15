@@ -77,9 +77,8 @@ func GetAllAchievements(db *mongo.Database, sqlDB *sql.DB) ([]model.AchievementR
 		}
 
 		var advisorID string
-		studentUUID, err := uuid.Parse(a.StudentID) // a.StudentID harus UUID
+		studentUUID, err := uuid.Parse(a.StudentID) 
 		if err != nil {
-			// Kalau StudentID tidak valid UUID, skip atau set advisorID kosong
 			a.AdvisorID = ""
 		} else {
 			err = sqlDB.QueryRow("SELECT advisor_id FROM students WHERE id=$1", studentUUID).Scan(&advisorID)
@@ -89,7 +88,6 @@ func GetAllAchievements(db *mongo.Database, sqlDB *sql.DB) ([]model.AchievementR
 			a.AdvisorID = advisorID
 		}
 
-		// Ambil reference dari PostgreSQL
 		ref, err := GetAchievementReferenceByMongoID(sqlDB, a.ID.Hex())
 		if err != nil {
 			return nil, err
@@ -123,7 +121,6 @@ func GetAchievementByID(db *mongo.Database, sqlDB *sql.DB, id string) (*model.Ac
 		return nil, err
 	}
 
-	// Ambil reference
 	ref, err := GetAchievementReferenceByMongoID(sqlDB, id)
 	if err != nil {
 		return nil, err
@@ -144,7 +141,6 @@ func GetAchievementByID(db *mongo.Database, sqlDB *sql.DB, id string) (*model.Ac
 	return &ach, nil
 }
 
-// Helper function untuk ambil advisor_id
 func GetAdvisorIDByStudentID(db *sql.DB, studentID string) (*string, error) {
 	var advisorID *string
 	query := `SELECT advisor_id FROM students WHERE id = $1`
@@ -313,7 +309,6 @@ func GetAchievementHistory(db *sql.DB, mongoDB *mongo.Database, mongoID string) 
 		},
 	}
 
-	// Ambil verified info jika ada
 	if ach.VerifiedAt != nil {
 		var updatedBy string
 		if ach.VerifiedBy != nil {
@@ -352,7 +347,6 @@ func GetAchievementsForStudent(
 			return nil, err
 		}
 
-		// merge reference from Postgres
 		ref, err := GetAchievementReferenceByMongoID(sqlDB, ach.ID.Hex())
 		if err != nil {
 			return nil, err
@@ -363,7 +357,6 @@ func GetAchievementsForStudent(
 			ach.RejectionNote = ref.RejectionNote
 		}
 
-		// advisor_id
 		studentUUID, err := uuid.Parse(studentID)
 		if err == nil {
 			sqlDB.QueryRow("SELECT advisor_id FROM students WHERE id=$1", studentUUID).Scan(&ach.AdvisorID)
@@ -382,7 +375,6 @@ func GetLecturerAchievementsPaginated(
 	offset int,
 ) ([]model.AchievementResponse, int, error) {
 
-	// Ambil student ID
 	studentIDs, err := GetStudentsByAdvisor(sqlDB, lecturerID)
 	if err != nil {
 		return nil, 0, err
@@ -391,7 +383,6 @@ func GetLecturerAchievementsPaginated(
 		return []model.AchievementResponse{}, 0, nil
 	}
 
-	// Query paginated achievement references
 	query := `
         SELECT student_id, mongo_achievement_id, verified_at, verified_by, rejection_note
         FROM achievement_references
@@ -427,7 +418,6 @@ func GetLecturerAchievementsPaginated(
 		list = append(list, ach)
 	}
 
-	// Count total entries
 	countQuery := `
         SELECT COUNT(*)
         FROM achievement_references
@@ -452,7 +442,6 @@ func UUIDPtrToStringPtr(u *uuid.UUID) *string {
 func GetRoleNameByID(db *sql.DB, roleID string) (string, error) {
 	var roleName string
 
-	// Convert string → UUID
 	uuidVal, err := uuid.Parse(roleID)
 	if err != nil {
 		return "", fmt.Errorf("invalid_role_uuid")
@@ -465,6 +454,7 @@ func GetRoleNameByID(db *sql.DB, roleID string) (string, error) {
 
 	return roleName, nil
 }
+
 func GetAdminAchievementsPaginated(
 	sqlDB *sql.DB,
 	mongoDB *mongo.Database,
@@ -529,7 +519,6 @@ func GetAdminAchievementsPaginated(
 		list = append(list, ach)
 	}
 
-	// total count
 	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM achievement_references WHERE %s`, filterQuery)
 	var total int
 	sqlDB.QueryRow(countQuery, args[:len(args)-2]...).Scan(&total)

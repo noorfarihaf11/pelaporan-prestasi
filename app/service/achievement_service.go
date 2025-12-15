@@ -25,7 +25,7 @@ func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	if err := c.BodyParser(req); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"status":  "error",
-			"message": "invalid_json",
+			"message": "Invalid JSON payload",
 		})
 	}
 
@@ -53,7 +53,7 @@ func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_create_achievement_mongo",
+			"message": "Failed create achievement mongo",
 		})
 	}
 
@@ -71,7 +71,7 @@ func UploadAchievementAttachmentService(c *fiber.Ctx, mongoDB *mongo.Database) e
 	if achievementID == "" {
 		return c.Status(400).JSON(fiber.Map{
 			"status":  "error",
-			"message": "missing_achievement_id",
+			"message": "Missing achievement id",
 		})
 	}
 
@@ -79,7 +79,7 @@ func UploadAchievementAttachmentService(c *fiber.Ctx, mongoDB *mongo.Database) e
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"status":  "error",
-			"message": "invalid_form_data",
+			"message": "Invalid form data",
 		})
 	}
 
@@ -87,14 +87,14 @@ func UploadAchievementAttachmentService(c *fiber.Ctx, mongoDB *mongo.Database) e
 	if len(files) == 0 {
 		return c.Status(400).JSON(fiber.Map{
 			"status":  "error",
-			"message": "no_files_uploaded",
+			"message": "No files upload",
 		})
 	}
 
 	if err := os.MkdirAll("uploads", os.ModePerm); err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_create_uploads_folder",
+			"message": "Failed creates upload folder",
 		})
 	}
 
@@ -108,7 +108,7 @@ func UploadAchievementAttachmentService(c *fiber.Ctx, mongoDB *mongo.Database) e
 			fmt.Println("SAVE FILE ERROR:", err)
 			return c.Status(500).JSON(fiber.Map{
 				"status":  "error",
-				"message": "failed_save_file",
+				"message": "Failed save file",
 			})
 		}
 
@@ -125,7 +125,7 @@ func UploadAchievementAttachmentService(c *fiber.Ctx, mongoDB *mongo.Database) e
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_update_attachments",
+			"message": "Failed update attachments",
 		})
 	}
 
@@ -135,26 +135,26 @@ func UploadAchievementAttachmentService(c *fiber.Ctx, mongoDB *mongo.Database) e
 	})
 }
 
-func GetAllAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB) error {
-	list, err := repository.GetAllAchievements(mongoDB, sqlDB)
+func GetAllAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
+	list, err := repository.GetAllAchievements(mongoDB, db)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_fetch_achievements",
+			"message": "Failed fetch attachments",
 			"detail":  err.Error(),
 		})
 	}
 
 	return c.Status(200).JSON(fiber.Map{
 		"status":  "success",
-		"message": "success_get_all_achievements",
+		"message": "Success get all achievements",
 		"data": fiber.Map{
 			"achievements": list,
 		},
 	})
 }
 
-func GetAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB) error {
+func GetAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
     rawUserID := c.Locals("user_id")
     rawRoleID := c.Locals("role_id")
 
@@ -164,15 +164,15 @@ func GetAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB
     if !ok1 || !ok2 || userID == "" || roleID == "" {
         return c.Status(401).JSON(fiber.Map{
             "status":  "error",
-            "message": "invalid_token_or_role_id_missing",
+            "message": "Invalid token or missing role id",
         })
     }
 
-    roleName, err := repository.GetRoleNameByID(sqlDB, roleID)
+    roleName, err := repository.GetRoleNameByID(db, roleID)
     if err != nil {
         return c.Status(403).JSON(fiber.Map{
             "status":  "error",
-            "message": "cannot_determine_role_name",
+            "message": "Cannot determine role name",
         })
     }
 
@@ -194,19 +194,19 @@ func GetAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB
         studentName := c.Query("student_name", "")
 
         achievements, total, err = repository.GetAdminAchievementsPaginated(
-            sqlDB, mongoDB, limit, offset, sort, order, status, studentName,
+            db, mongoDB, limit, offset, sort, order, status, studentName,
         )
         if err != nil {
             return c.Status(500).JSON(fiber.Map{
                 "status": "error",
-                "message": "failed_fetch_achievements",
+                "message": "Failed fetch attachment",
                 "detail": err.Error(),
             })
         }
 
         return c.JSON(fiber.Map{
             "status":  "success",
-            "message": "success_get_achievements",
+            "message": "Success get achievement",
             "data": fiber.Map{
                 "total":        total,
                 "page":         page,
@@ -216,39 +216,39 @@ func GetAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB
         })
 
     case "Mahasiswa":
-        studentID, err := repository.GetStudentIDByUserID(sqlDB, userID)
+        studentID, err := repository.GetStudentIDByUserID(db, userID)
         if err != nil || studentID == "" {
             return c.Status(404).JSON(fiber.Map{
                 "status":  "error",
-                "message": "student_not_found",
+                "message": "Student not found",
             })
         }
 
         achievements, err = repository.GetAchievementsForStudent(
-            mongoDB, sqlDB, studentID,
+            mongoDB, db, studentID,
         )
         if err != nil {
             return c.Status(500).JSON(fiber.Map{
                 "status": "error",
-                "message": "failed_fetch_achievements",
+                "message": "Failed fetch achievement",
                 "detail": err.Error(),
             })
         }
 
         return c.JSON(fiber.Map{
             "status":  "success",
-            "message": "success_get_achievements",
+            "message": "Success get achievement",
             "data": fiber.Map{
                 "achievements": achievements,
             },
         })
 
     case "Dosen Wali":
-        lecturerID, err := repository.GetLecturerIDByUserID(sqlDB, userID)
+        lecturerID, err := repository.GetLecturerIDByUserID(db, userID)
         if err != nil || lecturerID == "" {
             return c.Status(404).JSON(fiber.Map{
                 "status":  "error",
-                "message": "lecturer_not_found",
+                "message": "Lecturer not found",
             })
         }
 
@@ -257,19 +257,19 @@ func GetAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB
         offset := (page - 1) * limit
 
         achievements, total, err = repository.GetLecturerAchievementsPaginated(
-            sqlDB, mongoDB, lecturerID, limit, offset,
+            db, mongoDB, lecturerID, limit, offset,
         )
         if err != nil {
             return c.Status(500).JSON(fiber.Map{
                 "status": "error",
-                "message": "failed_fetch_achievements",
+                "message": "Failed fetch achievement",
                 "detail": err.Error(),
             })
         }
 
         return c.JSON(fiber.Map{
             "status":  "success",
-            "message": "success_get_achievements",
+            "message": "Success get achievement",
             "data": fiber.Map{
                 "total":        total,
                 "page":         page,
@@ -281,21 +281,21 @@ func GetAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB
     default:
         return c.Status(403).JSON(fiber.Map{
             "status":  "error",
-            "message": "forbidden_invalid_role",
+            "message": "Forbidden invalid role",
         })
     }
 }
 
 
 
-func GetAchievementByIDService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB) error {
+func GetAchievementByIDService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id")
 
-	ach, err := repository.GetAchievementByID(mongoDB, sqlDB, id)
+	ach, err := repository.GetAchievementByID(mongoDB, db, id)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_fetch_achievement",
+			"message": "Failed fetch achievements",
 			"detail":  err.Error(),
 		})
 	}
@@ -303,13 +303,13 @@ func GetAchievementByIDService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql
 	if ach == nil {
 		return c.Status(404).JSON(fiber.Map{
 			"status":  "error",
-			"message": "achievement_not_found",
+			"message": "Achievement not found",
 		})
 	}
 
 	return c.Status(200).JSON(fiber.Map{
 		"status":  "success",
-		"message": "success_get_achievement",
+		"message": "Success get achievement",
 		"data": fiber.Map{
 			"achievement": ach,
 		},
@@ -317,14 +317,14 @@ func GetAchievementByIDService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql
 }
 
 func UpdateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
-	id := c.Params("id") // mongo achievement id (hex)
+	id := c.Params("id") 
 	if id == "" {
-		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "missing_id"})
+		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "Missing ID"})
 	}
 
 	form, err := c.MultipartForm()
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "invalid_form_data"})
+		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "Invalid form data"})
 	}
 
 	title := form.Value["title"][0]
@@ -376,17 +376,17 @@ func UpdateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	})
 
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "failed_update_mongo"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "Failed update mongo"})
 	}
 
 	err = repository.UpdateAchievementReference(db, id, status)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "failed_update_reference"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "Failed update reference"})
 	}
 
 	return c.Status(200).JSON(fiber.Map{
 		"status":  "success",
-		"message": "achievement_updated_successfully",
+		"message": "Achievement updated successfully",
 		"data":    updated,
 	})
 }
@@ -408,20 +408,20 @@ func SoftDeleteAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql
 		if msg == "reference_not_found" {
 			return c.Status(404).JSON(fiber.Map{
 				"status":  "error",
-				"message": "achievement_reference_not_found",
+				"message": "Achievement reference not found",
 			})
 		}
 
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_soft_delete_reference",
+			"message": "Failed soft delete reference",
 			"detail":  msg,
 		})
 	}
 
 	return c.Status(200).JSON(fiber.Map{
 		"status":  "success",
-		"message": "achievement_deleted_successfully",
+		"message": "Achievement deleted successfully",
 	})
 }
 
@@ -443,7 +443,7 @@ func SubmitAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 		if msg == "reference_not_found" {
 			return c.Status(404).JSON(fiber.Map{
 				"status":  "error",
-				"message": "achievement_reference_not_found",
+				"message": "Achievement reference not found",
 			})
 		}
 
@@ -458,7 +458,7 @@ func SubmitAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_get_updated_achievement",
+			"message": "Failed get updated achievement",
 		})
 	}
 
@@ -478,14 +478,14 @@ func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	if err != nil || achievement == nil {
 		return c.Status(404).JSON(fiber.Map{
 			"status":  "error",
-			"message": "achievement_not_found",
+			"message": "Achievement not found",
 		})
 	}
 
 	if achievement.Status != "submitted" {
 		return c.Status(400).JSON(fiber.Map{
 			"status":         "error",
-			"message":        "achievement_must_be_submitted_to_verify",
+			"message":        "Achievement must be verify",
 			"current_status": achievement.Status,
 		})
 	}
@@ -494,7 +494,7 @@ func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	if err := c.BodyParser(&payload); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"status":  "error",
-			"message": "invalid_json",
+			"message": "Invalid JSON",
 		})
 	}
 
@@ -505,22 +505,22 @@ func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_update_achievement_mongo",
+			"message": "Failed update achievement mongo",
 			"detail":  err.Error(),
 		})
 	}
 
 	err = repository.UpdateAchievementReference(db, id, "verified")
 	if err != nil {
-		if err.Error() == "reference_not_found" {
+		if err.Error() == "Reference not found" {
 			return c.Status(404).JSON(fiber.Map{
 				"status":  "error",
-				"message": "achievement_reference_not_found",
+				"message": "Achievement reference not found",
 			})
 		}
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_update_reference_postgres",
+			"message": "Failed updated reference postgres",
 			"detail":  err.Error(),
 		})
 	}
@@ -529,7 +529,7 @@ func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_get_updated_achievement",
+			"message": "Failed get update achievement",
 		})
 	}
 
@@ -538,7 +538,7 @@ func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 		"message": "achievement verified successfully",
 		"data": fiber.Map{
 			"achievement":    updated,
-			"updated_status": updated.Status, // biasanya "verified"
+			"updated_status": updated.Status, 
 		},
 	})
 }
@@ -552,7 +552,7 @@ func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	if err := c.BodyParser(&body); err != nil || strings.TrimSpace(body.RejectionNote) == "" {
 		return c.Status(400).JSON(fiber.Map{
 			"status":  "error",
-			"message": "rejection_note_is_required",
+			"message": "Rejection note required",
 		})
 	}
 
@@ -560,14 +560,14 @@ func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{
 			"status":  "error",
-			"message": "achievement_not_found",
+			"message": "Achievement not found",
 		})
 	}
 
 	if achievement.Status != "submitted" && achievement.Status != "verified" {
 		return c.Status(400).JSON(fiber.Map{
 			"status":         "error",
-			"message":        "achievement_must_be_submitted_or_verified_to_reject",
+			"message":        "Achievement must be submitted or verified to reject.",
 			"current_status": achievement.Status,
 		})
 	}
@@ -576,7 +576,7 @@ func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_update_achievement_status",
+			"message": "Failed update achievement status",
 			"detail":  err.Error(),
 		})
 	}
@@ -587,13 +587,13 @@ func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 		if msg == "reference_not_found" {
 			return c.Status(404).JSON(fiber.Map{
 				"status":  "error",
-				"message": "achievement_reference_not_found",
+				"message": "Achievement reference not found",
 			})
 		}
 
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_update_achievement_reference",
+			"message": "Failed update achievement references",
 			"detail":  msg,
 		})
 	}
@@ -602,7 +602,7 @@ func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_get_rejected_achievement",
+			"message": "Failed get rejected achievements",
 		})
 	}
 
@@ -616,14 +616,14 @@ func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	})
 }
 
-func GetAchievementsByStudentIDService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB) error {
+func GetAchievementsByStudentIDService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id")
 
-	achievements, err := repository.GetAchievementsByStudentID(mongoDB, sqlDB, id)
+	achievements, err := repository.GetAchievementsByStudentID(mongoDB, db, id)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_fetch_achievements",
+			"message": "Failed fetch achievements",
 			"detail":  err.Error(),
 		})
 	}
@@ -631,33 +631,33 @@ func GetAchievementsByStudentIDService(c *fiber.Ctx, mongoDB *mongo.Database, sq
 	if len(achievements) == 0 {
 		return c.Status(404).JSON(fiber.Map{
 			"status":  "error",
-			"message": "no_achievements_found_for_student",
+			"message": "No achievements found for student",
 		})
 	}
 
 	return c.Status(200).JSON(fiber.Map{
 		"status":  "success",
-		"message": "success_get_achievements",
+		"message": "Success get achievement",
 		"data": fiber.Map{
 			"achievements": achievements,
 		},
 	})
 }
-func GetAchievementHistoryService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *sql.DB) error {
+func GetAchievementHistoryService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id")
 
-	ach, err := repository.GetAchievementByID(mongoDB, sqlDB, id)
+	ach, err := repository.GetAchievementByID(mongoDB, db, id)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_fetch_achievement",
+			"message": "Failed fetch achievement",
 			"detail":  err.Error(),
 		})
 	}
 	if ach == nil {
 		return c.Status(404).JSON(fiber.Map{
 			"status":  "error",
-			"message": "achievement_not_found",
+			"message": "Achievement not found",
 		})
 	}
 
@@ -714,7 +714,7 @@ func GetAchievementHistoryService(c *fiber.Ctx, mongoDB *mongo.Database, sqlDB *
 
 	return c.Status(200).JSON(fiber.Map{
 		"status":  "success",
-		"message": "success_get_achievement_history",
+		"message": "Success get achievement history",
 		"data": fiber.Map{
 			"history": history,
 		},

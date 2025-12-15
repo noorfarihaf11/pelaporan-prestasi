@@ -12,14 +12,14 @@ func GetStatisticsService(c *fiber.Ctx, db *mongo.Database) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_fetch_statistics",
+			"message": "Failed fetch statistic",
 			"detail":  err.Error(),
 		})
 	}
 
 	return c.Status(200).JSON(fiber.Map{
 		"status":  "success",
-		"message": "success_get_statistics",
+		"message": "Success get statistic",
 		"data":    stats,
 	})
 }
@@ -30,14 +30,14 @@ func GetStudentStatisticsService(c *fiber.Ctx, db *mongo.Database) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_fetch_student_statistics",
+			"message": "Failed fetch students statistic",
 			"detail":  err.Error(),
 		})
 	}
 
 	return c.Status(200).JSON(fiber.Map{
 		"status":  "success",
-		"message": "success_get_student_statistics",
+		"message": "Success get student statistic",
 		"data":    stats,
 	})
 }

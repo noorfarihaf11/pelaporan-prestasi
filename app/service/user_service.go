@@ -106,7 +106,7 @@ func CreateUserService(c *fiber.Ctx, db *sql.DB) error {
     if err := c.BodyParser(&dto); err != nil {
         return c.Status(400).JSON(fiber.Map{
             "status":  "error",
-            "message": "invalid_request_body",
+            "message": "Invalid request body",
         })
     }
 
@@ -114,7 +114,7 @@ func CreateUserService(c *fiber.Ctx, db *sql.DB) error {
     if err != nil {
         return c.Status(400).JSON(fiber.Map{
             "status":  "error",
-            "message": "invalid_role_id_format",
+            "message": "Invalid role id format",
         })
     }
 
@@ -122,7 +122,7 @@ func CreateUserService(c *fiber.Ctx, db *sql.DB) error {
     if err != nil {
         return c.Status(500).JSON(fiber.Map{
             "status":  "error",
-            "message": "failed_to_start_transaction",
+            "message": "Failed to start transaction",
         })
     }
 
@@ -136,7 +136,7 @@ func CreateUserService(c *fiber.Ctx, db *sql.DB) error {
     if err != nil {
         return c.Status(500).JSON(fiber.Map{
             "status":  "error",
-            "message": "failed_hashing_password",
+            "message": "Failed hasing password",
         })
     }
 
@@ -155,7 +155,7 @@ func CreateUserService(c *fiber.Ctx, db *sql.DB) error {
     if err != nil {
         return c.Status(500).JSON(fiber.Map{
             "status":  "error",
-            "message": "failed_creating_user",
+            "message": "Failed creating user",
         })
     }
 
@@ -171,7 +171,7 @@ func CreateUserService(c *fiber.Ctx, db *sql.DB) error {
                 if err != nil {
                     return c.Status(400).JSON(fiber.Map{
                         "status":  "error",
-                        "message": "invalid_advisor_id_format",
+                        "message": "Invalid advisor id format",
                     })
                 }
                 advisorUUID = &parsed
@@ -192,7 +192,7 @@ func CreateUserService(c *fiber.Ctx, db *sql.DB) error {
             fmt.Println("Repository error:", err)
             return c.Status(500).JSON(fiber.Map{
                 "status":  "error",
-                "message": "failed_creating_student_profile",
+                "message": "Failed creating student profile",
             })
         }
 
@@ -212,7 +212,7 @@ func CreateUserService(c *fiber.Ctx, db *sql.DB) error {
         if err != nil {
             return c.Status(500).JSON(fiber.Map{
                 "status":  "error",
-                "message": "failed_creating_lecturer_profile",
+                "message": "Failed creating lecturer profile",
             })
         }
         
@@ -223,13 +223,13 @@ func CreateUserService(c *fiber.Ctx, db *sql.DB) error {
     if err != nil {
         return c.Status(500).JSON(fiber.Map{
             "status":  "error",
-            "message": "failed_committing_transaction",
+            "message": "Failed commiting transaction",
         })
     }
 
     return c.Status(201).JSON(fiber.Map{
         "status":  "success",
-        "message": "user_created_successfully",
+        "message": "User created successfully",
         "data": fiber.Map{
             "user": user,
             "student_profile": student_result,
@@ -243,7 +243,7 @@ func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
     if id == "" {
         return c.Status(400).JSON(fiber.Map{
             "status":  "error",
-            "message": "missing_user_id",
+            "message": "Missing user ID",
         })
     }
 
@@ -251,7 +251,7 @@ func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
     if err != nil {
         return c.Status(400).JSON(fiber.Map{
             "status":  "error",
-            "message": "invalid_user_id_format",
+            "message": "Invalid user id format",
         })
     }
 
@@ -259,7 +259,7 @@ func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
     if err := c.BodyParser(&dto); err != nil {
         return c.Status(400).JSON(fiber.Map{
             "status":  "error",
-            "message": "invalid_request_body",
+            "message": "Invalid request body",
         })
     }
 
@@ -267,7 +267,7 @@ func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
     if err != nil {
         return c.Status(500).JSON(fiber.Map{
             "status":  "error",
-            "message": "failed_to_start_transaction",
+            "message": "Failed to start transactions",
         })
     }
 
@@ -284,7 +284,7 @@ func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
         if err != nil {
             return c.Status(500).JSON(fiber.Map{
                 "status":  "error",
-                "message": "failed_hashing_password",
+                "message": "Failed hasing password",
             })
         }
     }
@@ -294,7 +294,7 @@ func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
     if err != nil || existingUser == nil {
         return c.Status(404).JSON(fiber.Map{
             "status":  "error",
-            "message": "user_not_found",
+            "message": "User not found",
         })
     }
 
@@ -316,7 +316,7 @@ func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
         if err != nil {
             return c.Status(400).JSON(fiber.Map{
                 "status": "error",
-                "message": "invalid_role_id_format",
+                "message": "Invalid role id format",
             })
         }
         existingUser.RoleID = roleUUID
@@ -327,7 +327,7 @@ func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
     if err != nil {
         return c.Status(500).JSON(fiber.Map{
             "status":  "error",
-            "message": "failed_update_user",
+            "message": "Failed update user",
         })
     }
 
@@ -344,7 +344,7 @@ func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
             if err != nil {
                 return c.Status(400).JSON(fiber.Map{
                     "status":  "error",
-                    "message": "invalid_advisor_id_format",
+                    "message": "Invalid advisor id format",
                 })
             }
             advisorUUID = &parsed
@@ -362,7 +362,7 @@ func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
         if err != nil {
             return c.Status(500).JSON(fiber.Map{
                 "status":  "error",
-                "message": "failed_update_student",
+                "message": "Failed update student",
             })
         }
 
@@ -382,7 +382,7 @@ func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
         if err != nil {
             return c.Status(500).JSON(fiber.Map{
                 "status":  "error",
-                "message": "failed_update_lecturer",
+                "message": "Failed update lecturer",
             })
         }
 
@@ -393,7 +393,7 @@ func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
     if err != nil {
         return c.Status(500).JSON(fiber.Map{
             "status":  "error",
-            "message": "failed_commit_transaction",
+            "message": "Failed commit transaction",
         })
     }
 
@@ -413,7 +413,7 @@ func DeleteUserService(c *fiber.Ctx, db *sql.DB) error {
 	if id == "" {
 		return c.Status(400).JSON(fiber.Map{
 			"status":  "error",
-			"message": "missing_user_id",
+			"message": "Missing user id",
 		})
 	}
 
@@ -421,7 +421,7 @@ func DeleteUserService(c *fiber.Ctx, db *sql.DB) error {
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"status":  "error",
-			"message": "invalid_user_id_format",
+			"message": "Invalid user id format",
 		})
 	}
 
@@ -429,7 +429,7 @@ func DeleteUserService(c *fiber.Ctx, db *sql.DB) error {
 	if err != nil || existing == nil {
 		return c.Status(404).JSON(fiber.Map{
 			"status":  "error",
-			"message": "user_not_found",
+			"message": "User not found",
 		})
 	}
 
@@ -437,7 +437,7 @@ func DeleteUserService(c *fiber.Ctx, db *sql.DB) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_to_start_transaction",
+			"message": "Failed to start transaction",
 		})
 	}
 
@@ -451,7 +451,7 @@ func DeleteUserService(c *fiber.Ctx, db *sql.DB) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_delete_student_profile",
+			"message": "Failed delete student",
 		})
 	}
 
@@ -459,7 +459,7 @@ func DeleteUserService(c *fiber.Ctx, db *sql.DB) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_delete_lecturer_profile",
+			"message": "Failed deleted lecturer",
 		})
 	}
 
@@ -467,7 +467,7 @@ func DeleteUserService(c *fiber.Ctx, db *sql.DB) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_delete_user",
+			"message": "Failed delete user",
 		})
 	}
 
@@ -475,13 +475,13 @@ func DeleteUserService(c *fiber.Ctx, db *sql.DB) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
-			"message": "failed_commit_transaction",
+			"message": "Failed commit transaction",
 		})
 	}
 
 	return c.Status(200).JSON(fiber.Map{
 		"status":  "success",
-		"message": "user_deleted_successfully",
+		"message": "User deleted succesfully",
 	})
 }
 
@@ -490,7 +490,7 @@ func UpdateUserRoleService(c *fiber.Ctx, db *sql.DB) error {
     if id == "" {
         return c.Status(400).JSON(fiber.Map{
             "status": "error",
-            "message": "missing_user_id",
+            "message": "Missing user id",
         })
     }
 
@@ -498,7 +498,7 @@ func UpdateUserRoleService(c *fiber.Ctx, db *sql.DB) error {
     if err != nil {
         return c.Status(400).JSON(fiber.Map{
             "status": "error",
-            "message": "invalid_user_id_format",
+            "message": "Invalid user id format",
         })
     }
 
@@ -509,7 +509,7 @@ func UpdateUserRoleService(c *fiber.Ctx, db *sql.DB) error {
     if err := c.BodyParser(&payload); err != nil {
         return c.Status(400).JSON(fiber.Map{
             "status": "error",
-            "message": "invalid_request_body",
+            "message": "Invalid request body",
         })
     }
 
@@ -517,7 +517,7 @@ func UpdateUserRoleService(c *fiber.Ctx, db *sql.DB) error {
     if err != nil {
         return c.Status(400).JSON(fiber.Map{
             "status": "error",
-            "message": "invalid_role_id_format",
+            "message": "Invalid role id format",
         })
     }
 
@@ -525,7 +525,7 @@ func UpdateUserRoleService(c *fiber.Ctx, db *sql.DB) error {
     if err != nil {
         return c.Status(500).JSON(fiber.Map{
             "status": "error",
-            "message": "failed_update_user_role",
+            "message": "Failed update user profile",
         })
     }
 
