@@ -6,9 +6,19 @@ import (
 	"pelaporan-prestasi/config"
 	"pelaporan-prestasi/database"
 	"pelaporan-prestasi/routes"
+	_"pelaporan-prestasi/docs"
 	"time"
 )
 
+// @title           Pelaporan Prestasi API
+// @version         1.0
+// @description     Dokumentasi REST API Pelaporan Prestasi
+// @host            localhost:3000
+// @BasePath        /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	config.LoadEnv()
 	db := database.ConnectDB()

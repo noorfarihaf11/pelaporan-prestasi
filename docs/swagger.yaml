@@ -1,0 +1,113 @@
+basePath: /api/v1
+definitions:
+  model.BaseResponse:
+    properties:
+      data: {}
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  model.Lecturer:
+    properties:
+      created_at:
+        type: string
+      department:
+        type: string
+      id:
+        type: string
+      lecturer_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  model.StudentResponse:
+    properties:
+      full_name:
+        type: string
+      id:
+        type: string
+      program_study:
+        type: string
+      student_id:
+        type: string
+    type: object
+host: localhost:3000
+info:
+  contact: {}
+  description: Dokumentasi REST API Pelaporan Prestasi
+  title: Pelaporan Prestasi API
+  version: "1.0"
+paths:
+  /api/v1/lecturers:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil seluruh data dosen (Authorization Bearer)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.BaseResponse'
+            - properties:
+                data:
+                  additionalProperties:
+                    items:
+                      $ref: '#/definitions/model.Lecturer'
+                    type: array
+                  type: object
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all lecturers
+      tags:
+      - Lecturer
+  /api/v1/lecturers/{id}/advisees:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil daftar mahasiswa bimbingan berdasarkan lecturer ID
+      parameters:
+      - description: Lecturer ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.BaseResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.StudentResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.BaseResponse'
+      summary: Get advisees by lecturer
+      tags:
+      - Lecturer
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -8,6 +8,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// GetAllLecturers godoc
+// @Summary      Get all lecturers
+// @Description  Mengambil seluruh data dosen (Authorization Bearer)
+// @Tags         Lecturer
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} model.BaseResponse{data=map[string][]model.Lecturer}
+// @Failure      401 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/lecturers [get]
 func GetAllLecturersService(c *fiber.Ctx, db *sql.DB) error {
 	tokenString := c.Get("Authorization")
 	if tokenString == "" {
@@ -45,6 +56,16 @@ func GetAllLecturersService(c *fiber.Ctx, db *sql.DB) error {
 		},
 	})
 }
+// GetAdviseesByLecturer godoc
+// @Summary      Get advisees by lecturer
+// @Description  Mengambil daftar mahasiswa bimbingan berdasarkan lecturer ID
+// @Tags         Lecturer
+// @Accept       json
+// @Produce      json
+// @Param        id   path      string  true  "Lecturer ID"
+// @Success      200  {object}  model.BaseResponse{data=[]model.StudentResponse}
+// @Failure      500  {object}  model.BaseResponse
+// @Router       /api/v1/lecturers/{id}/advisees [get]
 func GetAdviseesByLecturerService(c *fiber.Ctx, db *sql.DB) error {
 	lecturerID := c.Params("id")
 

@@ -550,6 +550,7 @@ func UpdateUserRoleService(c *fiber.Ctx, db *sql.DB) error {
 		"message": "Role user berhasil diperbarui",
 	})
 }
+// test logic, karna fiber tidak bisa dilakukan unit testing
 func CreateUser(db *sql.DB, dto model.UserDTO) (*model.User, *model.Student, *model.Lecturer, error) {
 	roleUUID, err := uuid.Parse(dto.RoleID)
 	if err != nil {

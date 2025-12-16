@@ -3,6 +3,7 @@ package service
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	_ "fmt"
 	"os"
@@ -719,4 +720,122 @@ func GetAchievementHistoryService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql
 			"history": history,
 		},
 	})
+}
+var (
+	createAchievementFunc    = repository.CreateAchievement
+	createAchievementRefFunc = repository.CreateAchievementReference
+)
+var (
+	updateAchievementStatusFunc    = repository.UpdateAchievementStatus
+	updateAchievementRefFunc       = repository.UpdateAchievementReference
+	getAchievementByIDFunc         = repository.GetAchievementByID
+	verifyAchievementFunc          = repository.VerifyAchievement
+	rejectAchievementRefFunc       = repository.RejectAchievementReference
+)
+
+// test logic, karna fiber tidak bisa dilakukan unit testing
+func CreateAchievement(
+	mongoDB *mongo.Database,
+	db *sql.DB,
+	studentID string,
+	req *model.CreateAchievement,
+) (*model.Achievement, error) {
+
+	if studentID == "" {
+		return nil, errors.New("invalid student id")
+	}
+
+	ach := &model.Achievement{
+		StudentID:       studentID,
+		AchievementType: req.AchievementType,
+		Title:           req.Title,
+		Description:     req.Description,
+		Details:         req.Details,
+		Tags:            req.Tags,
+		Status:          "draft",
+		Attachments:     []model.Attachment{},
+	}
+
+	result, err := createAchievementFunc(mongoDB, ach)
+	if err != nil {
+		return nil, err
+	}
+
+	studentUUID, _ := uuid.Parse(studentID)
+	_ = createAchievementRefFunc(db, studentUUID, result.ID.Hex())
+
+	return result, nil
+}
+func SubmitAchievement(
+	mongoDB *mongo.Database,
+	db *sql.DB,
+	id string,
+) (*model.AchievementResponse, error) {
+
+	if err := updateAchievementStatusFunc(mongoDB, id, "submitted"); err != nil {
+		return nil, err
+	}
+
+	if err := updateAchievementRefFunc(db, id, "submitted"); err != nil {
+		return nil, err
+	}
+
+	return getAchievementByIDFunc(mongoDB, db, id)
+}
+func VerifyAchievement(
+	mongoDB *mongo.Database,
+	db *sql.DB,
+	id string,
+	points int,
+	lecturerID string,
+) (*model.AchievementResponse, error) {
+
+	ach, err := getAchievementByIDFunc(mongoDB, db, id)
+	if err != nil || ach == nil {
+		return nil, errors.New("not found")
+	}
+
+	if ach.Status != "submitted" {
+		return nil, errors.New("invalid status")
+	}
+
+	if err := verifyAchievementFunc(mongoDB, id, points, lecturerID); err != nil {
+		return nil, err
+	}
+
+	if err := updateAchievementRefFunc(db, id, "verified"); err != nil {
+		return nil, err
+	}
+
+	return getAchievementByIDFunc(mongoDB, db, id)
+}
+func RejectAchievement(
+	mongoDB *mongo.Database,
+	db *sql.DB,
+	id string,
+	note string,
+) (*model.AchievementResponse, error) {
+
+	if strings.TrimSpace(note) == "" {
+		return nil, errors.New("rejection note required")
+	}
+
+	ach, err := getAchievementByIDFunc(mongoDB, db, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if ach.Status != "submitted" && ach.Status != "verified" {
+		return nil, errors.New("invalid status")
+	}
+
+	if err := updateAchievementStatusFunc(mongoDB, id, "rejected"); err != nil {
+		return nil, err
+	}
+
+	if err := rejectAchievementRefFunc(db, id, note); err != nil {
+		return nil, err
+	}
+
+	return getAchievementByIDFunc(mongoDB, db, id)
 }
