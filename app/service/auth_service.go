@@ -2,6 +2,7 @@ package service
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,63 +14,62 @@ import (
 )
 
 func LoginService(c *fiber.Ctx, db *sql.DB) error {
-    var req model.LoginRequest
+	var req model.LoginRequest
 
-    if err := c.BodyParser(&req); err != nil {
-        return c.Status(400).JSON(fiber.Map{
-            "status":  "error",
-            "message": "Bad Request",
-        })
-    }
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Bad Request",
+		})
+	}
 
-    userPtr, passwordHash, err := repository.LoginUser(db, req.Username)
-    if err != nil {
-        fmt.Println("LOGIN ERROR:", err)
-        return c.Status(401).JSON(fiber.Map{
-            "status":  "error",
-            "message": "Unauthorized",
-        })
-    }
+	userPtr, passwordHash, err := repository.LoginUser(db, req.Username)
+	if err != nil {
+		fmt.Println("LOGIN ERROR:", err)
+		return c.Status(401).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Unauthorized",
+		})
+	}
 
-    if !utils.CheckPassword(req.Password, passwordHash) {
-        return c.Status(401).JSON(fiber.Map{
-            "status":  "error",
-            "message": "Invalid Credentials",
-        })
-    }
+	if !utils.CheckPassword(req.Password, passwordHash) {
+		return c.Status(401).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid Credentials",
+		})
+	}
 
-    token, err := utils.GenerateToken(*userPtr)
-    if err != nil {
-        return c.Status(500).JSON(fiber.Map{
-            "status":  "error",
-            "message": "Internal Server Error",
-        })
-    }
+	token, err := utils.GenerateToken(*userPtr)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Internal Server Error",
+		})
+	}
 
-    refreshToken, err := utils.GenerateRefreshToken(*userPtr)
-    if err != nil {
-        return c.Status(500).JSON(fiber.Map{
-            "status":  "error",
-            "message": "Internal Server Error",
-        })
-    }
+	refreshToken, err := utils.GenerateRefreshToken(*userPtr)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Internal Server Error",
+		})
+	}
 
-    return c.Status(200).JSON(fiber.Map{
-        "status": "success",
-        "data": fiber.Map{
-            "token":        token,
-            "refreshToken": refreshToken,
-            "user": fiber.Map{
-                "id":        userPtr.ID,
-                "full_name": userPtr.FullName,
-                "username":  userPtr.Username,
-                "role_id":   userPtr.RoleID,
-                "student_id": userPtr.StudentID, // penting
-            },
-        },
-    })
+	return c.Status(200).JSON(fiber.Map{
+		"status": "success",
+		"data": fiber.Map{
+			"token":        token,
+			"refreshToken": refreshToken,
+			"user": fiber.Map{
+				"id":         userPtr.ID,
+				"full_name":  userPtr.FullName,
+				"username":   userPtr.Username,
+				"role_id":    userPtr.RoleID,
+				"student_id": userPtr.StudentID,
+			},
+		},
+	})
 }
-
 
 func RegisterService(c *fiber.Ctx, db *sql.DB) error {
 	var req model.RegisterRequest
@@ -209,4 +209,27 @@ func GetProfileService(c *fiber.Ctx, db *sql.DB) error {
 			"email":     userPtr.Email,
 		},
 	})
+}
+
+var (
+	loginUserFunc            = repository.LoginUser
+	checkPasswordFunc        = utils.CheckPassword
+	generateTokenFunc        = utils.GenerateToken
+	generateRefreshTokenFunc = utils.GenerateRefreshToken
+)
+
+func Login(db *sql.DB, username, password string) (*model.User, string, string, error) {
+	user, passwordHash, err := loginUserFunc(db, username)
+	if err != nil {
+		return nil, "", "", errors.New("unauthorized")
+	}
+
+	if !checkPasswordFunc(password, passwordHash) {
+		return nil, "", "", errors.New("invalid credentials")
+	}
+
+	token, err := generateTokenFunc(*user)
+	refreshToken, err := generateRefreshTokenFunc(*user)
+
+	return user, token, refreshToken, nil
 }
