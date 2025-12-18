@@ -19,6 +19,18 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// CreateAchievement godoc
+// @Summary      Create achievement
+// @Description  Mahasiswa membuat achievement (status awal: draft)
+// @Tags         Achievement
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      model.CreateAchievement  true  "Create Achievement Payload"
+// @Success      201 {object} model.BaseResponse{data=model.AchievementSwagger}
+// @Failure      400 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/achievements [post]
 func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 
 	req := new(model.CreateAchievement)
@@ -67,6 +79,19 @@ func CreateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	})
 }
 
+// UploadAchievementAttachment godoc
+// @Summary      Upload achievement attachments
+// @Description  Upload file pendukung achievement
+// @Tags         Achievement
+// @Accept       multipart/form-data
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id           path      string true  "Achievement ID"
+// @Param        attachments  formData  file   true  "Attachment files"
+// @Success      200 {object} model.BaseResponse
+// @Failure      400 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/achievements/{id}/attachments [post]
 func UploadAchievementAttachmentService(c *fiber.Ctx, mongoDB *mongo.Database) error {
 	achievementID := c.Params("id")
 	if achievementID == "" {
@@ -121,7 +146,6 @@ func UploadAchievementAttachmentService(c *fiber.Ctx, mongoDB *mongo.Database) e
 		})
 	}
 
-	// Push ke MongoDB
 	err = repository.AddAttachmentsToAchievement(mongoDB, achievementID, attachments)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
@@ -136,25 +160,51 @@ func UploadAchievementAttachmentService(c *fiber.Ctx, mongoDB *mongo.Database) e
 	})
 }
 
-func GetAllAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
-	list, err := repository.GetAllAchievements(mongoDB, db)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Failed fetch attachments",
-			"detail":  err.Error(),
-		})
-	}
+// // GetAllAchievements godoc
+// // @Summary      Get all achievements
+// // @Description  Mengambil semua achievement (admin)
+// // @Tags         Achievement
+// // @Produce      json
+// // @Security     BearerAuth
+// // @Success      200 {object} model.BaseResponse
+// // @Failure      500 {object} model.BaseResponse
+// // @Router       /api/v1/achievements [get]
+// func GetAllAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
+// 	list, err := repository.GetAllAchievements(mongoDB, db)
+// 	if err != nil {
+// 		return c.Status(500).JSON(fiber.Map{
+// 			"status":  "error",
+// 			"message": "Failed fetch attachments",
+// 			"detail":  err.Error(),
+// 		})
+// 	}
 
-	return c.Status(200).JSON(fiber.Map{
-		"status":  "success",
-		"message": "Success get all achievements",
-		"data": fiber.Map{
-			"achievements": list,
-		},
-	})
-}
+// 	return c.Status(200).JSON(fiber.Map{
+// 		"status":  "success",
+// 		"message": "Success get all achievements",
+// 		"data": fiber.Map{
+// 			"achievements": list,
+// 		},
+// 	})
+// }
 
+// GetAchievements godoc
+// @Summary      Get achievements by role
+// @Description  Mengambil achievement berdasarkan role (Admin / Mahasiswa / Dosen Wali)
+// @Tags         Achievement
+// @Produce      json
+// @Security     BearerAuth
+// @Param        page          query     int     false "Page number"
+// @Param        limit         query     int     false "Limit data"
+// @Param        sort          query     string  false "Sort field"
+// @Param        order         query     string  false "ASC / DESC"
+// @Param        status        query     string  false "Achievement status"
+// @Param        student_name  query     string  false "Student name"
+// @Success      200 {object} model.BaseResponse
+// @Failure      401 {object} model.BaseResponse
+// @Failure      403 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/achievements [get]
 func GetAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
     rawUserID := c.Locals("user_id")
     rawRoleID := c.Locals("role_id")
@@ -288,7 +338,17 @@ func GetAchievementsService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) e
 }
 
 
-
+// GetAchievementByID godoc
+// @Summary      Get achievement detail
+// @Description  Mengambil detail achievement berdasarkan ID
+// @Tags         Achievement
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "Achievement ID"
+// @Success      200 {object} model.BaseResponse{data=map[string]model.AchievementSwagger}
+// @Failure      404 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/achievements/{id} [get]
 func GetAchievementByIDService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id")
 
@@ -317,6 +377,25 @@ func GetAchievementByIDService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB
 	})
 }
 
+// UpdateAchievement godoc
+// @Summary      Update achievement
+// @Description  Update achievement (multipart form, termasuk attachment)
+// @Tags         Achievement
+// @Accept       multipart/form-data
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id           path      string true  "Achievement ID"
+// @Param        title        formData  string false "Title"
+// @Param        description  formData  string false "Description"
+// @Param        status       formData  string false "Status"
+// @Param        details      formData  string false "JSON details"
+// @Param        tags         formData  string false "JSON tags"
+// @Param        points       formData  int    false "Points"
+// @Param        attachments  formData  file   false "Attachments"
+// @Success      200 {object} model.BaseResponse
+// @Failure      400 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/achievements/{id} [put]
 func UpdateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id") 
 	if id == "" {
@@ -391,6 +470,18 @@ func UpdateAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 		"data":    updated,
 	})
 }
+
+// SoftDeleteAchievement godoc
+// @Summary      Soft delete achievement
+// @Description  Menghapus achievement (soft delete)
+// @Tags         Achievement
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string true "Achievement ID"
+// @Success      200 {object} model.BaseResponse
+// @Failure      400 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/achievements/{id} [delete]
 func SoftDeleteAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id")
 
@@ -426,6 +517,17 @@ func SoftDeleteAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql
 	})
 }
 
+// SubmitAchievement godoc
+// @Summary      Submit achievement
+// @Description  Mengirim achievement (draft → submitted)
+// @Tags         Achievement
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string true "Achievement ID"
+// @Success      200 {object} model.BaseResponse
+// @Failure      400 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/achievements/{id}/submit [post]
 func SubmitAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id")
 
@@ -472,6 +574,20 @@ func SubmitAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	})
 }
 
+// VerifyAchievement godoc
+// @Summary      Verify achievement
+// @Description  Verifikasi achievement oleh dosen wali
+// @Tags         Achievement
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path      string                  true "Achievement ID"
+// @Param        body  body      model.VerifyAchievement true "Verification payload"
+// @Success      200 {object} model.BaseResponse
+// @Failure      400 {object} model.BaseResponse
+// @Failure      404 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/achievements/{id}/verify [post]
 func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id")
 
@@ -544,6 +660,20 @@ func VerifyAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	})
 }
 
+// RejectAchievement godoc
+// @Summary      Reject achievement
+// @Description  Menolak achievement dengan catatan
+// @Tags         Achievement
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path      string true "Achievement ID"
+// @Param        body  body      object true "Rejection payload" example({"rejection_note":"Data tidak valid"})
+// @Success      200 {object} model.BaseResponse
+// @Failure      400 {object} model.BaseResponse
+// @Failure      404 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/achievements/{id}/reject [post]
 func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id")
 
@@ -617,6 +747,17 @@ func RejectAchievementService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB)
 	})
 }
 
+// GetAchievementsByStudentID godoc
+// @Summary      Get achievements by student
+// @Description  Mengambil achievement berdasarkan student ID
+// @Tags         Achievement
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string true "Student ID"
+// @Success      200 {object} model.BaseResponse
+// @Failure      404 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/achievements/{id}/student [get]
 func GetAchievementsByStudentIDService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id")
 
@@ -644,6 +785,18 @@ func GetAchievementsByStudentIDService(c *fiber.Ctx, mongoDB *mongo.Database, db
 		},
 	})
 }
+
+// GetAchievementHistory godoc
+// @Summary      Get achievement history
+// @Description  Riwayat perubahan status achievement
+// @Tags         Achievement
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string true "Achievement ID"
+// @Success      200 {object} model.BaseResponse{data=map[string][]model.AchievementHistory}
+// @Failure      404 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/achievements/{id}/history [get]
 func GetAchievementHistoryService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql.DB) error {
 	id := c.Params("id")
 
@@ -721,6 +874,8 @@ func GetAchievementHistoryService(c *fiber.Ctx, mongoDB *mongo.Database, db *sql
 		},
 	})
 }
+
+//unit testing
 var (
 	createAchievementFunc    = repository.CreateAchievement
 	createAchievementRefFunc = repository.CreateAchievementReference

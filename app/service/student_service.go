@@ -9,6 +9,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// GetAllStudents godoc
+// @Summary      Get all students
+// @Description  Mengambil seluruh data mahasiswa (Authorization Bearer)
+// @Tags         Student
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} model.BaseResponse{data=map[string][]model.Student}
+// @Failure      401 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/students [get]
 func GetAllStudentService(c *fiber.Ctx, db *sql.DB) error {
 	tokenString := c.Get("Authorization")
 	if tokenString == "" {
@@ -46,6 +57,20 @@ func GetAllStudentService(c *fiber.Ctx, db *sql.DB) error {
 		},
 	})
 }
+// GetStudentByID godoc
+// @Summary      Get student by ID
+// @Description  Mengambil data mahasiswa berdasarkan ID
+// @Tags         Student
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "Student ID"
+// @Success      200 {object} model.BaseResponse{data=map[string]model.Student}
+// @Failure      400 {object} model.BaseResponse
+// @Failure      401 {object} model.BaseResponse
+// @Failure      404 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/students/{id} [get]
 func GetStudentByIDService(c *fiber.Ctx, db *sql.DB) error {
 	id := c.Params("id")
 	if id == "" {
@@ -97,6 +122,20 @@ func GetStudentByIDService(c *fiber.Ctx, db *sql.DB) error {
 		},
 	})
 }
+// UpdateStudentAdvisor godoc
+// @Summary      Update student advisor
+// @Description  Mengubah dosen pembimbing mahasiswa
+// @Tags         Student
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path      string                     true  "Student ID"
+// @Param        body  body      model.UpdateAdvisorRequest true  "Advisor Data"
+// @Success      200 {object} model.BaseResponse
+// @Failure      400 {object} model.BaseResponse
+// @Failure      404 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/students/{id}/advisor [put]
 func UpdateStudentAdvisorService(c *fiber.Ctx, db *sql.DB) error {
 	studentID := c.Params("id")
 	var req model.UpdateAdvisorRequest

@@ -13,6 +13,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// Login godoc
+// @Summary      User login
+// @Description  Login user dan menghasilkan access token & refresh token
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body  model.LoginRequest  true  "Login credentials"
+// @Success      200 {object} model.BaseResponse{data=map[string]interface{}}
+// @Failure      400 {object} model.BaseResponse
+// @Failure      401 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/auth/login [post]
 func LoginService(c *fiber.Ctx, db *sql.DB) error {
 	var req model.LoginRequest
 
@@ -119,7 +131,19 @@ func RegisterService(c *fiber.Ctx, db *sql.DB) error {
 		"user":    createdUser,
 	})
 }
-
+// RefreshToken godoc
+// @Summary      Refresh access token
+// @Description  Generate ulang access token menggunakan refresh token
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body  model.RefreshClaims  true  "Refresh token"
+// @Success      200 {object} model.BaseResponse{data=map[string]string}
+// @Failure      400 {object} model.BaseResponse
+// @Failure      401 {object} model.BaseResponse
+// @Failure      404 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/auth/refresh [post]
 func RefreshTokenService(c *fiber.Ctx, db *sql.DB) error {
 	var req struct {
 		RefreshToken string `json:"refreshToken"`
@@ -171,6 +195,17 @@ func LogoutService(c *fiber.Ctx) error {
 		"message": "Logout berhasil",
 	})
 }
+// GetProfile godoc
+// @Summary      Get user profile
+// @Description  Mengambil data profile user berdasarkan access token
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} model.BaseResponse{data=map[string]string}
+// @Failure      401 {object} model.BaseResponse
+// @Failure      404 {object} model.BaseResponse
+// @Router       /api/v1/auth/profile [get]
 func GetProfileService(c *fiber.Ctx, db *sql.DB) error {
 	tokenString := c.Get("Authorization")
 	if tokenString == "" {

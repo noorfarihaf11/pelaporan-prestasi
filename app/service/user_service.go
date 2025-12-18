@@ -13,6 +13,17 @@ import (
 	"github.com/google/uuid"
 )
 
+// GetAllUsers godoc
+// @Summary      Get all users
+// @Description  Mengambil seluruh data user
+// @Tags         User
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} model.BaseResponse{data=map[string][]model.User}
+// @Failure      401 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/users [get]
 func GetAllUserService(c *fiber.Ctx, db *sql.DB) error {
 	tokenString := c.Get("Authorization")
 	if tokenString == "" {
@@ -50,6 +61,21 @@ func GetAllUserService(c *fiber.Ctx, db *sql.DB) error {
 		},
 	})
 }
+
+// GetUserByID godoc
+// @Summary      Get user by ID
+// @Description  Mengambil detail user berdasarkan ID
+// @Tags         User
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "User ID"
+// @Success      200 {object} model.BaseResponse{data=map[string]model.User}
+// @Failure      400 {object} model.BaseResponse
+// @Failure      401 {object} model.BaseResponse
+// @Failure      404 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/users/{id} [get]
 func GetUserByIDService(c *fiber.Ctx, db *sql.DB) error {
 	id := c.Params("id")
 	if id == "" {
@@ -123,6 +149,18 @@ var (
 	deleteUserTxFunc    = repository.DeleteUserTx
 )
 
+// CreateUser godoc
+// @Summary      Create new user
+// @Description  Membuat user baru (beserta student / lecturer profile jika ada)
+// @Tags         User
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body  body      model.UserDTO  true  "Create User Payload"
+// @Success      201 {object} model.BaseResponse
+// @Failure      400 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/users [post]
 func CreateUserService(c *fiber.Ctx, db *sql.DB) error {
 	var dto model.UserDTO
 	if err := c.BodyParser(&dto); err != nil {
@@ -259,6 +297,20 @@ func CreateUserService(c *fiber.Ctx, db *sql.DB) error {
 	})
 }
 
+// UpdateUser godoc
+// @Summary      Update user
+// @Description  Memperbarui data user beserta student / lecturer profile
+// @Tags         User
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path      string        true  "User ID"
+// @Param        body  body      model.UserDTO true  "Update User Payload"
+// @Success      200 {object} model.BaseResponse
+// @Failure      400 {object} model.BaseResponse
+// @Failure      404 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/users/{id} [put]
 func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
 	id := c.Params("id")
 	if id == "" {
@@ -424,6 +476,19 @@ func UpdateUserService(c *fiber.Ctx, db *sql.DB) error {
 	})
 }
 
+// DeleteUser godoc
+// @Summary      Delete user
+// @Description  Menghapus user beserta relasi student dan lecturer
+// @Tags         User
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "User ID"
+// @Success      200 {object} model.BaseResponse
+// @Failure      400 {object} model.BaseResponse
+// @Failure      404 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/users/{id} [delete]
 func DeleteUserService(c *fiber.Ctx, db *sql.DB) error {
 	id := c.Params("id")
 	if id == "" {
@@ -501,6 +566,19 @@ func DeleteUserService(c *fiber.Ctx, db *sql.DB) error {
 	})
 }
 
+// UpdateUserRole godoc
+// @Summary      Update user role
+// @Description  Mengubah role user
+// @Tags         User
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id    path      string  true  "User ID"
+// @Param        body  body      object  true  "Role Payload"  example({"role_id":"uuid"})
+// @Success      200 {object} model.BaseResponse
+// @Failure      400 {object} model.BaseResponse
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/users/{id}/role [patch]
 func UpdateUserRoleService(c *fiber.Ctx, db *sql.DB) error {
 	id := c.Params("id")
 	if id == "" {
@@ -550,6 +628,7 @@ func UpdateUserRoleService(c *fiber.Ctx, db *sql.DB) error {
 		"message": "Role user berhasil diperbarui",
 	})
 }
+
 // test logic, karna fiber tidak bisa dilakukan unit testing
 func CreateUser(db *sql.DB, dto model.UserDTO) (*model.User, *model.Student, *model.Lecturer, error) {
 	roleUUID, err := uuid.Parse(dto.RoleID)

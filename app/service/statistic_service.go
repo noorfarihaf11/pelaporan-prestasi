@@ -7,6 +7,16 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// GetStatistics godoc
+// @Summary      Get achievement statistics
+// @Description  Mengambil statistik pencapaian secara keseluruhan
+// @Tags         Statistic
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} model.BaseResponse{data=map[string]interface{}}
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/statistics [get]
 func GetStatisticsService(c *fiber.Ctx, db *mongo.Database) error {
 	stats, err := repository.GetAchievementStatistics(db)
 	if err != nil {
@@ -23,6 +33,18 @@ func GetStatisticsService(c *fiber.Ctx, db *mongo.Database) error {
 		"data":    stats,
 	})
 }
+
+// GetStudentStatistics godoc
+// @Summary      Get student achievement statistics
+// @Description  Mengambil statistik pencapaian berdasarkan student ID
+// @Tags         Statistic
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "Student ID"
+// @Success      200 {object} model.BaseResponse{data=map[string]interface{}}
+// @Failure      500 {object} model.BaseResponse
+// @Router       /api/v1/statistics/students/{id} [get]
 func GetStudentStatisticsService(c *fiber.Ctx, db *mongo.Database) error {
 	studentID := c.Params("id")
 
